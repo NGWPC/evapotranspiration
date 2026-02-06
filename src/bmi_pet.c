@@ -1079,6 +1079,7 @@ static int Set_value (Bmi *self, const char *name, void *array)
         model->bmi.current_time_step = 0.0;
         // recover starting time from the config; doesn't seem to be used in processing
         model->bmi.current_time = model->bmi.starting_time;
+        return BMI_SUCCESS;
     }
 
     void * dest = NULL;
