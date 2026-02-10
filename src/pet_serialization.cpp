@@ -74,7 +74,6 @@ serialize(Archive& ar, const unsigned int version) {
     ar & model->inter_vars.moist_air_gas_constant_J_per_kg_K;
     ar & model->inter_vars.moist_air_density_kg_per_m3;
     ar & model->inter_vars.slope_sat_vap_press_curve_Pa_s;
-    ar & model->inter_vars.water_latent_heat_of_vaporization_J_per_kg;
     ar & model->inter_vars.psychrometric_constant_Pa_per_C;
 
     // surface radiation forcing
