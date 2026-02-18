@@ -30,7 +30,7 @@ target_include_directories(petbmi PRIVATE include)
 
 set_target_properties(petbmi PROPERTIES VERSION ${PROJECT_VERSION})
 
-set_target_properties(petbmi PROPERTIES PUBLIC_HEADER bmi_pet.h)
+set_target_properties(petbmi PROPERTIES PUBLIC_HEADER include/bmi_pet.h)
 
 target_link_libraries(petbmi PRIVATE Boost::serialization)
 
