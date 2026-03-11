@@ -1159,11 +1159,14 @@ static int Get_value(Bmi * self, const char * name, void *dest)
     void *src = NULL;
     int nbytes = 0;
 
-
     if (self->get_value_ptr (self, name, &src) == BMI_FAILURE)
+        PET_LOG(SEVERE, "Get_value failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
 
     if (self->get_var_nbytes (self, name, &nbytes) == BMI_FAILURE)
+        PET_LOG(SEVERE, "Get_value failed: unable to determine size for variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
     
     memcpy(dest, src, nbytes);
@@ -1186,9 +1189,13 @@ static int Set_value (Bmi *self, const char *name, void *array)
     int nbytes = 0;
 
     if (self->get_value_ptr(self, name, &dest) == BMI_FAILURE)
+	PET_LOG(SEVERE, "Set_value failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
 
     if (self->get_var_nbytes(self, name, &nbytes) == BMI_FAILURE)
+	PET_LOG(SEVERE, "Set_value failed: unable to determine size for variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
 
     memcpy (dest, array, nbytes);
@@ -1204,9 +1211,13 @@ static int Set_value_at_indices (Bmi *self, const char *name, int * inds, int le
     int itemsize = 0;
 
     if (self->get_value_ptr (self, name, &to) == BMI_FAILURE)
+	PET_LOG(SEVERE, "Set_value_at_indices failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
 
     if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE)
+	PET_LOG(SEVERE, "Set_value_at_indices failed: unable to determine size for variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
 
     { /* Copy the data */
@@ -1281,6 +1292,8 @@ static int Get_var_units (Bmi *self, const char *name, char * units)
     }
     // If we get here, it means the variable name wasn't recognized
     units[0] = '\0';
+    PET_LOG(SEVERE, "Get_var_units failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
     return BMI_FAILURE;
 }
 
@@ -1302,6 +1315,8 @@ static int Get_var_nbytes (Bmi *self, const char *name, int * nbytes)
     int item_size;
     int item_size_result = Get_var_itemsize(self, name, &item_size);
     if (item_size_result != BMI_SUCCESS) {
+        PET_LOG(SEVERE, "Get_var_nbytes failed: unable to determine size for variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
     }
     int item_count = -1;
@@ -1339,6 +1354,8 @@ static int Get_grid_rank (Bmi *self, int grid, int * rank)
     }
     else {
         *rank = -1;
+	PET_LOG(SEVERE,
+            "Get_grid_rank failed: unable to determine rank for grid %d", grid);
         return BMI_FAILURE;
     }
 }
@@ -1352,6 +1369,8 @@ static int Get_grid_size(Bmi *self, int grid, int * size)
     }
     else {
         *size = -1;
+	PET_LOG(SEVERE,
+            "Get_grid_size failed: unable to determine size for grid %d", grid);
         return BMI_FAILURE;
     }
 }
@@ -1367,6 +1386,8 @@ static int Get_grid_type (Bmi *self, int grid, char * type)
     }
     else {
         type[0] = '\0';
+	PET_LOG(SEVERE,
+            "Get_grid_type failed: unable to determine type for grid %d", grid);
         status = BMI_FAILURE;
     }
     return status;
@@ -1376,18 +1397,24 @@ static int Get_grid_type (Bmi *self, int grid, char * type)
 /* Uniform rectilinear (grid type) */
 static int Get_grid_shape(Bmi *self, int grid, int *shape)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_shape failed: unable to determine shape for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_spacing(Bmi *self, int grid, double *spacing)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_spacing failed: unable to determine spacing for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_origin(Bmi *self, int grid, double *origin)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_origin failed: unable to determine origin for grid %d", grid);
     return BMI_FAILURE;
 }
 
@@ -1395,18 +1422,24 @@ static int Get_grid_origin(Bmi *self, int grid, double *origin)
 /* Non-uniform rectilinear, curvilinear (grid type)*/
 static int Get_grid_x(Bmi *self, int grid, double *x)
 {
+    PET_LOG(SEVERE,
+            "Get_grid_x failed: unable to determine x value for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_y(Bmi *self, int grid, double *y)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_y failed: unable to determine y value for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_z(Bmi *self, int grid, double *z)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_z failed: unable to determine z value for grid %d", grid);
     return BMI_FAILURE;
 }
 
@@ -1414,42 +1447,56 @@ static int Get_grid_z(Bmi *self, int grid, double *z)
 /*Unstructured (grid type)*/
 static int Get_grid_node_count(Bmi *self, int grid, int *count)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_node_count failed: unable to determine node count for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_edge_count(Bmi *self, int grid, int *count)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_edge_count failed: unable to determine edge count for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_face_count(Bmi *self, int grid, int *count)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_face_count failed: unable to determine face count for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_edge_nodes(Bmi *self, int grid, int *edge_nodes)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_edge_nodes failed: unable to determine edge nodes for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_face_edges(Bmi *self, int grid, int *face_edges)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_face_edges failed: unable to determine face edges for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_face_nodes(Bmi *self, int grid, int *face_nodes)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_face_nodes failed: unable to determine face node for grid %d", grid);
     return BMI_FAILURE;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_nodes_per_face(Bmi *self, int grid, int *nodes_per_face)
 {
+    PET_LOG(SEVERE,
+        "Get_grid_nodes_per_face failed: unable to determine node per face for grid %d", grid);
     return BMI_FAILURE;
 }
 

@@ -1,5 +1,6 @@
 extern "C" {
 #include "../include/pet.h"
+#include "../include/logger.h"
 }
 
 #include "../include/pet_serialization.h"
@@ -10,7 +11,8 @@ extern "C" {
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-
+#define PET_LOG(level, fmt, ...) \
+    Log((level), "PET: " fmt, ##__VA_ARGS__)
 
 class BmiPetSerialization {
     public:
@@ -86,56 +88,87 @@ serialize(Archive& ar, const unsigned int version) {
 
 
 extern "C" {
-
 int free_serialized_pet(Bmi* bmi) {
+    if (bmi == nullptr || bmi->data == nullptr) {
+        PET_LOG(SEVERE, "free_serialized_pet called with NULL bmi or bmi->data");
+        return BMI_FAILURE;
+    }
+
     pet_model* model = (pet_model*)bmi->data;
+
     if (model->serialized != NULL) {
         free(model->serialized);
         model->serialized = NULL;
     }
     model->serialized_length = 0;
+
+    PET_LOG(DEBUG, "Freed PET serialized state");
     return BMI_SUCCESS;
 }
 
 int new_serialized_pet(Bmi* bmi) {
+    if (bmi == nullptr || bmi->data == nullptr) {
+        PET_LOG(SEVERE, "new_serialized_pet called with NULL bmi or bmi->data");
+        return BMI_FAILURE;
+    }
+
     BmiPetSerialization serializer(bmi);
     vecbuf<char> stream;
     boost::archive::binary_oarchive archive(stream);
+
     try {
         archive << serializer;
     } catch (const std::exception &e) {
-        // Log(LogLevel::SEVERE, "Serializing PET encountered an error: ", e.what());
+        PET_LOG(SEVERE, "Serializing PET failed: %s", e.what());
         return BMI_FAILURE;
     }
-    // copy serialized data into pet data
+
     pet_model* model = (pet_model*)bmi->data;
-    // clear previous data if it exists
+
     if (model->serialized != NULL) {
         free(model->serialized);
+        model->serialized = NULL;
     }
-    // set size and allocate memory
+
     model->serialized_length = stream.size();
     model->serialized = (char*)malloc(model->serialized_length);
-    // make sure memory could be allocated
+
     if (model->serialized == NULL) {
-        // Log(LogLevel::SEVERE, "Serializing PET encountered an error: Failed to allocate memory.");
+        PET_LOG(FATAL, "Serializing PET failed: memory allocation failed for %zu bytes",
+                (size_t)model->serialized_length);
         model->serialized_length = 0;
         return BMI_FAILURE;
     }
-    // copy stream data to new allocation
+
     memcpy(model->serialized, stream.data(), model->serialized_length);
+
+    PET_LOG(DEBUG, "Created PET serialized state (%zu bytes)",
+            (size_t)model->serialized_length);
+
     return BMI_SUCCESS;
 }
 
 int load_serialized_pet(Bmi* bmi, const char* data) {
+    if (bmi == nullptr || bmi->data == nullptr) {
+        PET_LOG(SEVERE, "load_serialized_pet called with NULL bmi or bmi->data");
+        return BMI_FAILURE;
+    }
+
+    if (data == nullptr) {
+        PET_LOG(SEVERE, "load_serialized_pet called with NULL data");
+        return BMI_FAILURE;
+    }
+
     BmiPetSerialization serializer(bmi);
     std::istringstream stream(data);
     boost::archive::binary_iarchive archive(stream);
+
     try {
         archive >> serializer;
+        PET_LOG(DEBUG, "Loaded PET serialized state successfully");
         return BMI_SUCCESS;
     } catch (const std::exception &e) {
-        // Log(LogLevel::SEVERE, "Serializing PET encountered an error: ", e.what());
+        PET_LOG(SEVERE, "Deserializing PET failed: %s", e.what());
         return BMI_FAILURE;
     }
 }
