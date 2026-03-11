@@ -19,9 +19,7 @@ else()
 endif()
 
 # -----------------------------------------------------------------------------
-# Find dependencies
-find_package(ewts CONFIG REQUIRED)
-
+# Find the Boost library and configure usage
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -29,14 +27,20 @@ find_package(Boost 1.79.0 REQUIRED COMPONENTS serialization)
 
 target_include_directories(petbmi PRIVATE include)
 
-target_link_libraries(petbmi
-    PRIVATE
-        Boost::serialization
-        ewts::ewts_ngen_bridge
-)
-
 set_target_properties(petbmi PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(petbmi PROPERTIES PUBLIC_HEADER include/bmi_pet.h)
+
+target_link_libraries(petbmi PRIVATE Boost::serialization)
+
+# --- EWTS (installed from nwm-ewts) ---
+find_package(ewts CONFIG REQUIRED)
+
+# Always use EWTS runtime logger for C
+target_link_libraries(petbmi PRIVATE ewts::ewts_c)
+
+# Built with ngen bridge
+target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
+target_compile_definitions(petbmi PRIVATE EWTS_HAVE_NGEN_BRIDGE)
 
 # Code requires minimum of C99 standard to compile
 set_target_properties(petbmi PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)

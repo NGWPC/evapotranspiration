@@ -1130,15 +1130,17 @@ static int Get_value_at_indices (Bmi *self, const char *name, void *dest, int * 
     void *src = NULL;
     int itemsize = 0;
 
-    if (self->get_value_ptr(self, name, &src) == BMI_FAILURE)
+    if (self->get_value_ptr(self, name, &src) == BMI_FAILURE){
 	PET_LOG(SEVERE, "Get_value_at_indices failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
+    }	
 
-    if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE)
+    if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE){
 	PET_LOG(SEVERE, "Get_value_at_indices failed: unknown item size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
+    }
 
     { /* Copy the data */
         size_t i;
@@ -1159,16 +1161,17 @@ static int Get_value(Bmi * self, const char * name, void *dest)
     void *src = NULL;
     int nbytes = 0;
 
-    if (self->get_value_ptr (self, name, &src) == BMI_FAILURE)
+    if (self->get_value_ptr (self, name, &src) == BMI_FAILURE) {
         PET_LOG(SEVERE, "Get_value failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
+    }
 
-    if (self->get_var_nbytes (self, name, &nbytes) == BMI_FAILURE)
+    if (self->get_var_nbytes (self, name, &nbytes) == BMI_FAILURE){
         PET_LOG(SEVERE, "Get_value failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
-    
+    }
     memcpy(dest, src, nbytes);
 
     return BMI_SUCCESS;
@@ -1179,26 +1182,30 @@ static int Set_value (Bmi *self, const char *name, void *array)
     // special cases for serialization
     if (strcmp(name, "serialization_create") == 0) {
         return new_serialized_pet(self);
-    } else if (strcmp(name, "serialization_state") == 0) {
+    }
+    else if (strcmp(name, "serialization_state") == 0) {
         return load_serialized_pet(self, (char*)array);
-    } else if (strcmp(name, "serialization_free") == 0) {
+    }
+    else if (strcmp(name, "serialization_free") == 0) {
         return free_serialized_pet(self);
     }
 
-    void * dest = NULL;
+    void *dest = NULL;
     int nbytes = 0;
 
-    if (self->get_value_ptr(self, name, &dest) == BMI_FAILURE)
-	PET_LOG(SEVERE, "Set_value failed: unknown or inaccessible variable '%s'",
+    if (self->get_value_ptr(self, name, &dest) == BMI_FAILURE) {
+        PET_LOG(SEVERE, "Set_value failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
+    }
 
-    if (self->get_var_nbytes(self, name, &nbytes) == BMI_FAILURE)
-	PET_LOG(SEVERE, "Set_value failed: unable to determine size for variable '%s'",
+    if (self->get_var_nbytes(self, name, &nbytes) == BMI_FAILURE) {
+        PET_LOG(SEVERE, "Set_value failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
+    }
 
-    memcpy (dest, array, nbytes);
+    memcpy(dest, array, nbytes);
 
     return BMI_SUCCESS;
 }
@@ -1210,15 +1217,16 @@ static int Set_value_at_indices (Bmi *self, const char *name, int * inds, int le
     void * to = NULL;
     int itemsize = 0;
 
-    if (self->get_value_ptr (self, name, &to) == BMI_FAILURE)
+    if (self->get_value_ptr (self, name, &to) == BMI_FAILURE){
 	PET_LOG(SEVERE, "Set_value_at_indices failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
-
-    if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE)
+    }
+    if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE){
 	PET_LOG(SEVERE, "Set_value_at_indices failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
+    }	
 
     { /* Copy the data */
         size_t i;
