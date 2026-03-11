@@ -638,7 +638,7 @@ int read_file_line_counts_pet(const char* file_name, int* line_count, int* max_l
     // Ensure exists
     if (fp == NULL) {
 	PET_PERROR(SEVERE, "read_file_line_counts_pet failed to open file '%s'",
-                   file_name ? file_name : "(null)")
+                   file_name ? file_name : "(null)");
         return -1;
     }
     int seen_non_whitespace = 0;

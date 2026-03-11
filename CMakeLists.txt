@@ -12,11 +12,6 @@ set(PET_LIB_DESC_CMAKE "OWP PET BMI Module Shared Library")
 # Make sure these are compiled with this directive
 add_compile_definitions(BMI_ACTIVE)
 
-# Added cache variable so caller can point PET to EWTS
-set(EWTS_INCLUDE_DIR "" CACHE PATH "Path to EWTS include parent directory")
-set(EWTS_LIBRARY "" CACHE FILEPATH "Path to EWTS library")
-
-
 if(WIN32)
     add_library(petbmi src/bmi_pet.c src/pet.c src/pet_serialization.cpp)
 else()
@@ -24,31 +19,24 @@ else()
 endif()
 
 # -----------------------------------------------------------------------------
-# Find the Boost library and configure usage
+# Find dependencies
+find_package(ewts CONFIG REQUIRED)
+
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.79.0 REQUIRED COMPONENTS serialization)
 
-target_link_libraries(petbmi PRIVATE Boost::serialization)
 target_include_directories(petbmi PRIVATE include)
 
-if(EWTS_INCLUDE_DIR)
-    target_include_directories(petbmi PRIVATE ${EWTS_INCLUDE_DIR})
-endif()
-
-target_link_libraries(petbmi PRIVATE Boost::serialization)
-
-if(EWTS_LIBRARY)
-    target_link_libraries(petbmi PRIVATE ${EWTS_LIBRARY})
-endif()
-
+target_link_libraries(petbmi
+    PRIVATE
+        Boost::serialization
+        ewts::ewts_ngen_bridge
+)
 
 set_target_properties(petbmi PROPERTIES VERSION ${PROJECT_VERSION})
-
 set_target_properties(petbmi PROPERTIES PUBLIC_HEADER include/bmi_pet.h)
-
-target_link_libraries(petbmi PRIVATE Boost::serialization)
 
 # Code requires minimum of C99 standard to compile
 set_target_properties(petbmi PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)
