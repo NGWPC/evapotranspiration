@@ -115,10 +115,11 @@ Initialize (Bmi *self, const char *cfg_file)
         char* ret = NULL;
         // First read the header line
         ret = fgets(line_str, max_forcing_line_length + 1, ffp);
-        if (ret == NULL)
+        if (ret == NULL){
 	    PET_LOG(SEVERE, "Failed to read header line from forcing file '%s'",
                     pet->forcing_file ? pet->forcing_file : "(null)");
             return BMI_FAILURE;
+        }
 
         if (pet->bmi.verbose > 2) 
             PET_LOG(INFO,"the number of time steps from the forcing file is: %8.6e \n", (double)pet->bmi.num_timesteps);
@@ -126,13 +127,14 @@ Initialize (Bmi *self, const char *cfg_file)
         aorc_forcing_data_pet forcings;
         for (int i = 0; i < pet->bmi.num_timesteps; i++) {
             ret = fgets(line_str, max_forcing_line_length + 1, ffp);  // read in a line of AORC data.
-            if (ret == NULL)
+            if (ret == NULL) {
 		PET_LOG(SEVERE,
                         "Unexpected EOF or read failure in forcing file '%s' at timestep %d of %ld",
                         pet->forcing_file ? pet->forcing_file : "(null)",
                         i, pet->bmi.num_timesteps);
                 fclose(ffp);
                 return BMI_FAILURE;
+            }		
             parse_aorc_line_pet(line_str, &year, &month, &day, &hour, &minute, &dsec, &forcings);
             pet->forcing_data_precip_kg_per_m2[i] = forcings.precip_kg_per_m2 * ((double)pet->bmi.time_step_size_s);
             if (pet->bmi.verbose >4)
@@ -195,7 +197,11 @@ Update (Bmi *self)
         PET_LOG(DEBUG, "BMI Update PET: current_step=%ld current_time=%f",
                 pet->bmi.current_step, pet->bmi.current_time);
 
-    run_pet(pet);
+    //run_pet(pet);
+    if (run_pet(pet) != BMI_SUCCESS) {
+        PET_LOG(SEVERE, "Update failed: run_pet returned failure");
+        return BMI_FAILURE;
+    }
 
     pet->bmi.current_time_step += pet->bmi.time_step_size_s; // Seconds since start of run
     pet->bmi.current_step +=1;                            // time steps since start of run
@@ -739,6 +745,7 @@ int read_init_config_pet(pet_model* model, const char* config_file)
             if(model->bmi.verbose > 2){
                 PET_LOG(INFO, "printing a lot of stuff (level > 2) for unit tests and troubleshooting \n");
             }
+	    continue;    
         }
         // jmframe: this should be strtol instead of strtod
         if (strcmp(param_key, "pet_method") == 0){
@@ -747,6 +754,7 @@ int read_init_config_pet(pet_model* model, const char* config_file)
                 PET_LOG(DEBUG, "set PET method from config file \n");
                 PET_LOG(DEBUG, "%d\n", model->pet_method);
             }
+	    continue;    
         }
         if (strcmp(param_key, "yes_aorc") == 0) {
             model->pet_options.yes_aorc = strtod(param_value, NULL);
@@ -841,14 +849,16 @@ int read_init_config_pet(pet_model* model, const char* config_file)
             }
             continue;
         }
-        if (strcmp(param_key, "surface_shortwave_albedo") == 0) {
-            model->surf_rad_params.surface_shortwave_albedo = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "surface_shortwave_albedo from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
-            }
-            continue;
-        }
+
+	// Duplicated "surface_shortwave_albedo"  block
+        //if (strcmp(param_key, "surface_shortwave_albedo") == 0) {
+        //    model->surf_rad_params.surface_shortwave_albedo = strtod(param_value, NULL);
+        //    if(model->bmi.verbose >=2){
+        //         PET_LOG(DEBUG, "surface_shortwave_albedo from config file \n");
+        //        PET_LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
+        //    }
+        //    continue;
+        //}
         if (strcmp(param_key, "latitude_degrees") == 0) {
             model->solar_params.latitude_degrees = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
@@ -877,7 +887,7 @@ int read_init_config_pet(pet_model* model, const char* config_file)
             model->bmi.time_step_size_s = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
                 PET_LOG(DEBUG, "time_step_size_s from config file \n");
-                PET_LOG(DEBUG, "%d\n", model->bmi.time_step_size_s);
+                PET_LOG(DEBUG, "%f\n", model->bmi.time_step_size_s);
             }
             continue;
         }
@@ -1025,7 +1035,8 @@ static int Get_var_grid(Bmi *self, const char *name, int *grid)
         }
     }
     // If we get here, it means the variable name wasn't recognized
-    grid[0] = '\0';
+    // grid[0] = '\0';
+    *grid = -1;
     return BMI_FAILURE;
 }
 

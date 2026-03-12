@@ -97,11 +97,12 @@ extern int run_pet(pet_model* model)
       PET_LOG(SEVERE,
               "run_pet forcing index out of bounds: current_step=%ld num_timesteps=%ld",
               model->bmi.current_step, model->bmi.num_timesteps);
-      return;
+      return -1;
     }
     model->pet_forcing.air_temperature_C = model->forcing_data_air_temperature_2m_K[model->bmi.current_step] - TK;//convert to C
     model->pet_forcing.relative_humidity_percent     = (double)-99.9; // this negative number means use specific humidity
-    model->pet_forcing.specific_humidity_2m_kg_per_kg = model->forcing_data_precip_kg_per_m2[model->bmi.current_step];
+    //model->pet_forcing.specific_humidity_2m_kg_per_kg = model->forcing_data_precip_kg_per_m2[model->bmi.current_step];
+    model->pet_forcing.specific_humidity_2m_kg_per_kg = model->forcing_data_specific_humidity_2m_kg_per_kg[model->bmi.current_step];
     model->pet_forcing.air_pressure_Pa    = model->forcing_data_surface_pressure_Pa[model->bmi.current_step];
     model->pet_forcing.wind_speed_m_per_s = hypot(model->forcing_data_u_wind_speed_10m_m_per_s[model->bmi.current_step],
                                            model->forcing_data_v_wind_speed_10m_m_per_s[model->bmi.current_step]);                 
@@ -339,14 +340,14 @@ void pet_setup(pet_model* model)
     // UNIT TEST PASSED.
   }
 
-  return;
+  return 1;
 }
 
 void pet_unit_tests(pet_model* model)
 {
   if (model == NULL) {
     PET_LOG(SEVERE, "pet_unit_tests called with NULL model");
-    return;
+    return 1;
   }
 
   PET_LOG(INFO, "Beginning PET unit tests");
@@ -378,7 +379,7 @@ void pet_unit_tests(pet_model* model)
               model->pet_m_per_s);
 
   PET_LOG(INFO, "Completed PET unit tests");
-  return;
+  return 1;
 }
 
 /**************************************************************************/
@@ -397,7 +398,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
                      struct aorc_forcing_data_pet *aorc) {
     if (theString == NULL || aorc == NULL) {
         PET_LOG(SEVERE, "parse_aorc_line_pet called with NULL input");
-        return;
+        return 1;
     }
 
     char str[20];
@@ -414,7 +415,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
     copy_to_free = copy = strdup(theString);
     if (copy_to_free == NULL) {
         PET_LOG(FATAL, "parse_aorc_line_pet failed to duplicate input line");
-        return;
+        return 1;
     }
     // time
     value = strsep(&copy, ",");
@@ -472,7 +473,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
     // Go ahead and free the duplicate copy now
     free(copy_to_free);
 
-    return;
+    return 1;
 }
 
 /*####################################################################*/
@@ -512,7 +513,7 @@ void get_word_pet(char *theString, int *start, int *end, char *theWord, int *wor
     theWord[j] = '\0';
     *start = i + 1;
     *wordlen = strlen(theWord);
-    return;
+    return 1;
 }
 
 /****************************************/
@@ -547,7 +548,7 @@ void itwo_alloc_pet(int ***array, int rows, int cols) {
     } else {
         PET_LOG(DEBUG, "Allocated int matrix rows=%d cols=%d", rows, cols);
     }
-    return;
+    return 0;
 }
 
 
@@ -581,7 +582,7 @@ void dtwo_alloc_pet(double ***array, int rows, int cols) {
     } else {
         PET_LOG(DEBUG, "Allocated double matrix rows=%d cols=%d", rows, cols);
     }
-    return;
+    return 0;
 }
 
 
@@ -591,7 +592,7 @@ void d_alloc_pet(double **var, int size) {
     *var = (double *) malloc(size * sizeof(double));
     if (*var == NULL) {
         PET_LOG(FATAL, "Problem allocating memory for array in d_alloc.\n");
-        return;
+        return 1;
     } else
         memset(*var, 0, size * sizeof(double));
     return;
