@@ -73,7 +73,7 @@ extern int run_pet(pet_model* model)
 {
   if (model == NULL) {
     PET_LOG(FATAL, "run_pet called with NULL model");
-    return;
+    return 1;
   }
 
   if (model->bmi.verbose > 2) {
@@ -148,7 +148,7 @@ extern int run_pet(pet_model* model)
                 "(wind_height=%f zero_plane=%f)",
                 model->pet_params.wind_speed_measurement_height_m,
                 model->pet_params.zero_plane_displacement_height_m);
-        return;
+        return 1;
     }
 
     model->pet_forcing.wind_speed_m_per_s = model->pet_forcing.wind_speed_m_per_s*numerator/denominator;  // this is the 2 m value
@@ -340,14 +340,14 @@ void pet_setup(pet_model* model)
     // UNIT TEST PASSED.
   }
 
-  return 1;
+  return;
 }
 
 void pet_unit_tests(pet_model* model)
 {
   if (model == NULL) {
     PET_LOG(SEVERE, "pet_unit_tests called with NULL model");
-    return 1;
+    return;
   }
 
   PET_LOG(INFO, "Beginning PET unit tests");
@@ -379,7 +379,7 @@ void pet_unit_tests(pet_model* model)
               model->pet_m_per_s);
 
   PET_LOG(INFO, "Completed PET unit tests");
-  return 1;
+  return;
 }
 
 /**************************************************************************/
@@ -398,7 +398,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
                      struct aorc_forcing_data_pet *aorc) {
     if (theString == NULL || aorc == NULL) {
         PET_LOG(SEVERE, "parse_aorc_line_pet called with NULL input");
-        return 1;
+        return;
     }
 
     char str[20];
@@ -415,7 +415,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
     copy_to_free = copy = strdup(theString);
     if (copy_to_free == NULL) {
         PET_LOG(FATAL, "parse_aorc_line_pet failed to duplicate input line");
-        return 1;
+        return;
     }
     // time
     value = strsep(&copy, ",");
@@ -473,7 +473,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
     // Go ahead and free the duplicate copy now
     free(copy_to_free);
 
-    return 1;
+    return;
 }
 
 /*####################################################################*/
@@ -513,7 +513,7 @@ void get_word_pet(char *theString, int *start, int *end, char *theWord, int *wor
     theWord[j] = '\0';
     *start = i + 1;
     *wordlen = strlen(theWord);
-    return 1;
+    return;
 }
 
 /****************************************/
@@ -548,7 +548,7 @@ void itwo_alloc_pet(int ***array, int rows, int cols) {
     } else {
         PET_LOG(DEBUG, "Allocated int matrix rows=%d cols=%d", rows, cols);
     }
-    return 0;
+    return;
 }
 
 
@@ -582,7 +582,7 @@ void dtwo_alloc_pet(double ***array, int rows, int cols) {
     } else {
         PET_LOG(DEBUG, "Allocated double matrix rows=%d cols=%d", rows, cols);
     }
-    return 0;
+    return;
 }
 
 
@@ -592,7 +592,7 @@ void d_alloc_pet(double **var, int size) {
     *var = (double *) malloc(size * sizeof(double));
     if (*var == NULL) {
         PET_LOG(FATAL, "Problem allocating memory for array in d_alloc.\n");
-        return 1;
+        return;
     } else
         memset(*var, 0, size * sizeof(double));
     return;

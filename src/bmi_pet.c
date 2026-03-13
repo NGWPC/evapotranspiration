@@ -32,6 +32,12 @@ Initialize (Bmi *self, const char *cfg_file)
         return BMI_FAILURE;
     }
 
+    #ifdef EWTS_HAVE_NGEN_BRIDGE
+        EwtsInit(EWTS_ID_PET, true);
+    #else
+        EwtsInit(EWTS_ID_PET, false);
+    #endif
+
     PET_LOG(INFO, "Initializing PET with config file '%s'", cfg_file ? cfg_file : "(null)");
 
     int config_read_result = read_init_config_pet(pet, cfg_file);
