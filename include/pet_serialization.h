@@ -9,7 +9,7 @@ extern "C" {
 
 int free_serialized_pet(Bmi* bmi);
 int new_serialized_pet(Bmi* bmi);
-int load_serialized_pet(Bmi* bmi, const char* data);
+int load_serialized_pet(Bmi* bmi, char* data);
 
 #ifdef __cplusplus
 }
