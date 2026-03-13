@@ -1,14 +1,7 @@
 #ifndef PET_LOGGER_H
 #define PET_LOGGER_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include "ewts/module_constants.h"
+#define EWTS_ID EWTS_ID_TOPMODEL
 #include "ewts/logger.h"
-
-#ifdef __cplusplus
-}
-#endif
-
+#include "ewts/log_levels.h"
 #endif /* PET_LOGGER_H */
