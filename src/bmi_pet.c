@@ -24,9 +24,6 @@
 static int
 Initialize (Bmi *self, const char *cfg_file)
 {
-    pet_model *pet;
-    pet = (pet_model *) self->data;
-
     if (self == NULL || self->data == NULL) {
         PET_LOG(FATAL, "Initialize failed: self or self->data is NULL");
         return BMI_FAILURE;
@@ -38,6 +35,7 @@ Initialize (Bmi *self, const char *cfg_file)
         EwtsInit(EWTS_ID_PET, false);
     #endif
 
+    pet_model *pet = (pet_model *) self->data;
     PET_LOG(INFO, "Initializing PET with config file '%s'", cfg_file ? cfg_file : "(null)");
 
     int config_read_result = read_init_config_pet(pet, cfg_file);
