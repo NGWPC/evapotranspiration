@@ -116,8 +116,10 @@ Initialize (Bmi *self, const char *cfg_file)
     
     
             pet->forcing_data_time[i] = forcings.time;
-            if (i == 0)
+            if (i == 0) {
                 pet->bmi.current_time =forcings.time;
+                pet->bmi.starting_time = forcings.time;
+            }
         }
         fclose(ffp);
     }
@@ -820,6 +822,9 @@ static int Get_var_type (Bmi *self, const char *name, char * type)
     } else if (strcmp(name, "serialization_free") == 0) {
         strncpy(type, "int", BMI_MAX_TYPE_NAME);
         return BMI_SUCCESS;
+    } else if (strcmp(name, "reset_time") == 0) {
+        strncpy(type, "double", BMI_MAX_TYPE_NAME);
+        return BMI_SUCCESS;
     }
     // Check to see if in output array first
     for (int i = 0; i < OUTPUT_VAR_NAME_COUNT; i++) {
@@ -1075,6 +1080,15 @@ static int Set_value (Bmi *self, const char *name, void *array)
         return load_serialized_pet(self, (char*)array);
     } else if (strcmp(name, "serialization_free") == 0) {
         return free_serialized_pet(self);
+    } else if (strcmp(name, "reset_time") == 0) {
+        pet_model *model = (pet_model *)self->data;
+        // set to 0 in init; used in indexing into forcing data
+        model->bmi.current_step = 0;
+        // just used in reporting
+        model->bmi.current_time_step = 0.0;
+        // recover starting time from the config; doesn't seem to be used in processing
+        model->bmi.current_time = model->bmi.starting_time;
+        return BMI_SUCCESS;
     }
 
     void * dest = NULL;
@@ -1192,6 +1206,9 @@ static int Get_var_nbytes (Bmi *self, const char *name, int * nbytes)
         return BMI_SUCCESS;
     } else if (strcmp(name, "serialization_free") == 0) {
         *nbytes = sizeof(int);
+        return BMI_SUCCESS;
+    } else if (strcmp(name, "reset_time") == 0) {
+        *nbytes = sizeof(double);
         return BMI_SUCCESS;
     }
     int item_size;

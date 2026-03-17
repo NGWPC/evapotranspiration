@@ -220,11 +220,12 @@ struct pet_bmi
                But what if we want to run at a timestep different than seconds? 
                We probably would never do that. The output is in units of m_per_s, so this is probably good.
   */
-  int time_step_size_s;
   long int num_timesteps;
   double current_time_step;   // this is the actual time of the run.
   long int current_step;        // this is a sequential value to find the correct row from forcing file
   double current_time;        // this should be in "Seconds since 1970", so should be start time plus current time step
+  double starting_time;       // store the "current_time" value from the config for "reset_time" BMI option
+  int time_step_size_s;
   int verbose;
   int run_unit_tests;
   int is_forcing_from_bmi;
