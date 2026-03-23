@@ -11,8 +11,6 @@ extern "C" {
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-#define PET_LOG(level, fmt, ...) \
-    Log((level), "PET: " fmt, ##__VA_ARGS__)
 
 class BmiPetSerialization {
     public:
@@ -90,7 +88,7 @@ serialize(Archive& ar, const unsigned int version) {
 extern "C" {
 int free_serialized_pet(Bmi* bmi) {
     if (bmi == nullptr || bmi->data == nullptr) {
-        PET_LOG(SEVERE, "free_serialized_pet called with NULL bmi or bmi->data");
+        LOG(FATAL, "free_serialized_pet called with NULL bmi or bmi->data");
         return BMI_FAILURE;
     }
 
@@ -102,13 +100,13 @@ int free_serialized_pet(Bmi* bmi) {
     }
     model->serialized_length = 0;
 
-    PET_LOG(DEBUG, "Freed PET serialized state");
+    LOG(DEBUG, "Freed PET serialized state");
     return BMI_SUCCESS;
 }
 
 int new_serialized_pet(Bmi* bmi) {
     if (bmi == nullptr || bmi->data == nullptr) {
-        PET_LOG(SEVERE, "new_serialized_pet called with NULL bmi or bmi->data");
+        LOG(FATAL, "new_serialized_pet called with NULL bmi or bmi->data");
         return BMI_FAILURE;
     }
 
@@ -119,7 +117,7 @@ int new_serialized_pet(Bmi* bmi) {
     try {
         archive << serializer;
     } catch (const std::exception &e) {
-        PET_LOG(SEVERE, "Serializing PET failed: %s", e.what());
+        LOG(FATAL, "Serializing PET failed: %s", e.what());
         return BMI_FAILURE;
     }
 
@@ -134,7 +132,7 @@ int new_serialized_pet(Bmi* bmi) {
     model->serialized = (char*)malloc(model->serialized_length);
 
     if (model->serialized == NULL) {
-        PET_LOG(FATAL, "Serializing PET failed: memory allocation failed for %zu bytes",
+        LOG(FATAL, "Serializing PET failed: memory allocation failed for %zu bytes",
                 (size_t)model->serialized_length);
         model->serialized_length = 0;
         return BMI_FAILURE;
@@ -142,7 +140,7 @@ int new_serialized_pet(Bmi* bmi) {
 
     memcpy(model->serialized, stream.data(), model->serialized_length);
 
-    PET_LOG(DEBUG, "Created PET serialized state (%zu bytes)",
+    LOG(DEBUG, "Created PET serialized state (%zu bytes)",
             (size_t)model->serialized_length);
 
     return BMI_SUCCESS;
@@ -150,12 +148,12 @@ int new_serialized_pet(Bmi* bmi) {
 
 int load_serialized_pet(Bmi* bmi, const char* data) {
     if (bmi == nullptr || bmi->data == nullptr) {
-        PET_LOG(SEVERE, "load_serialized_pet called with NULL bmi or bmi->data");
+        LOG(FATAL, "load_serialized_pet called with NULL bmi or bmi->data");
         return BMI_FAILURE;
     }
 
     if (data == nullptr) {
-        PET_LOG(SEVERE, "load_serialized_pet called with NULL data");
+        LOG(FATAL, "load_serialized_pet called with NULL data");
         return BMI_FAILURE;
     }
 
@@ -165,10 +163,10 @@ int load_serialized_pet(Bmi* bmi, const char* data) {
 
     try {
         archive >> serializer;
-        PET_LOG(DEBUG, "Loaded PET serialized state successfully");
+        LOG(DEBUG, "Loaded PET serialized state successfully");
         return BMI_SUCCESS;
     } catch (const std::exception &e) {
-        PET_LOG(SEVERE, "Deserializing PET failed: %s", e.what());
+        LOG(FATAL, "Deserializing PET failed: %s", e.what());
         return BMI_FAILURE;
     }
 }

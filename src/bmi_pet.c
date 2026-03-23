@@ -15,17 +15,11 @@
 #define INPUT_VAR_NAME_COUNT 7 //
 #define OUTPUT_VAR_NAME_COUNT 1 // water_potential_evaporation_flux; 
 
-#define PET_LOG(level, fmt, ...) \
-    Log((level), "PET: " fmt, ##__VA_ARGS__)
-
-#define PET_PERROR(level, fmt, ...) \
-    Log((level), "PET: " fmt " (errno=%d: %s)", ##__VA_ARGS__, errno, strerror(errno))
-
 static int
 Initialize (Bmi *self, const char *cfg_file)
 {
     if (self == NULL || self->data == NULL) {
-        PET_LOG(FATAL, "Initialize failed: self or self->data is NULL");
+        LOG(FATAL, "Initialize failed: self or self->data is NULL");
         return BMI_FAILURE;
     }
 
@@ -36,18 +30,18 @@ Initialize (Bmi *self, const char *cfg_file)
     #endif
 
     pet_model *pet = (pet_model *) self->data;
-    PET_LOG(INFO, "Initializing PET with config file '%s'", cfg_file ? cfg_file : "(null)");
+    LOG(INFO, "Initializing PET with config file '%s'", cfg_file ? cfg_file : "(null)");
 
     int config_read_result = read_init_config_pet(pet, cfg_file);
     if (config_read_result == BMI_FAILURE) {
-        PET_LOG(FATAL, "Failed to read PET config file '%s'", cfg_file ? cfg_file : "(null)");
+        LOG(FATAL, "Failed to read PET config file '%s'", cfg_file ? cfg_file : "(null)");
         return BMI_FAILURE;
     }
 
     pet_setup(pet);
 
     if (pet->bmi.verbose > 1)
-        PET_LOG(INFO, "BMI Initialization PET setup completed");
+        LOG(INFO, "BMI Initialization PET setup completed");
 
     /*
         We might be taking forcing data from the framework via BMI.
@@ -58,22 +52,22 @@ Initialize (Bmi *self, const char *cfg_file)
     */
     if (pet->bmi.is_forcing_from_bmi == 1)
         if (pet->bmi.verbose>1)
-	    PET_LOG(INFO, "Using BMI to receive forcing data; forcing file will not be read");
+	    LOG(INFO, "Using BMI to receive forcing data; forcing file will not be read");
     if (pet->bmi.is_forcing_from_bmi == 0){
         if (pet->bmi.verbose>1)
-            PET_LOG(INFO, "Reading forcing data from file '%s'",
+            LOG(INFO, "Reading forcing data from file '%s'",
                     pet->forcing_file ? pet->forcing_file : "(null)");
 
         // Figure out the number of lines first (also char count)
 	int forcing_line_count, max_forcing_line_length;
 	int count_result = read_file_line_counts_pet(pet->forcing_file, &forcing_line_count, &max_forcing_line_length);
         if (count_result == -1) {
-            PET_LOG(SEVERE, "Configured forcing file could not be opened for reading: '%s'",
+            LOG(FATAL, "Configured forcing file could not be opened for reading: '%s'",
                     pet->forcing_file ? pet->forcing_file : "(null)");
             return BMI_FAILURE;
         }
         if (forcing_line_count == 1) {
-            PET_LOG(SEVERE, "Invalid forcing file (header only): '%s'",
+            LOG(FATAL, "Invalid forcing file (header only): '%s'",
                     pet->forcing_file ? pet->forcing_file : "(null)");
             return BMI_FAILURE;
         }
@@ -98,7 +92,7 @@ Initialize (Bmi *self, const char *cfg_file)
             pet->forcing_data_air_temperature_2m_K == NULL ||
             pet->forcing_data_u_wind_speed_10m_m_per_s == NULL ||
             pet->forcing_data_v_wind_speed_10m_m_per_s == NULL) {
-            PET_LOG(FATAL, "Memory allocation failed while creating forcing arrays (num_timesteps=%ld)",
+            LOG(FATAL, "Memory allocation failed while creating forcing arrays (num_timesteps=%ld)",
                     pet->bmi.num_timesteps);
             return BMI_FAILURE;
         }
@@ -107,7 +101,7 @@ Initialize (Bmi *self, const char *cfg_file)
         FILE* ffp = fopen(pet->forcing_file, "r");
         // Ensure still exists
         if (ffp == NULL) {
-	    PET_PERROR(SEVERE, "Unable to open forcing file '%s'",
+	    LOG(FATAL, "Unable to open forcing file '%s'",
                        pet->forcing_file ? pet->forcing_file : "(null)");
             return BMI_FAILURE;
         }
@@ -120,19 +114,19 @@ Initialize (Bmi *self, const char *cfg_file)
         // First read the header line
         ret = fgets(line_str, max_forcing_line_length + 1, ffp);
         if (ret == NULL){
-	    PET_LOG(SEVERE, "Failed to read header line from forcing file '%s'",
+	    LOG(FATAL, "Failed to read header line from forcing file '%s'",
                     pet->forcing_file ? pet->forcing_file : "(null)");
             return BMI_FAILURE;
         }
 
         if (pet->bmi.verbose > 2) 
-            PET_LOG(INFO,"the number of time steps from the forcing file is: %8.6e \n", (double)pet->bmi.num_timesteps);
+            LOG(INFO,"the number of time steps from the forcing file is: %8.6e \n", (double)pet->bmi.num_timesteps);
     
         aorc_forcing_data_pet forcings;
         for (int i = 0; i < pet->bmi.num_timesteps; i++) {
             ret = fgets(line_str, max_forcing_line_length + 1, ffp);  // read in a line of AORC data.
             if (ret == NULL) {
-		PET_LOG(SEVERE,
+		LOG(FATAL,
                         "Unexpected EOF or read failure in forcing file '%s' at timestep %d of %ld",
                         pet->forcing_file ? pet->forcing_file : "(null)",
                         i, pet->bmi.num_timesteps);
@@ -142,28 +136,28 @@ Initialize (Bmi *self, const char *cfg_file)
             parse_aorc_line_pet(line_str, &year, &month, &day, &hour, &minute, &dsec, &forcings);
             pet->forcing_data_precip_kg_per_m2[i] = forcings.precip_kg_per_m2 * ((double)pet->bmi.time_step_size_s);
             if (pet->bmi.verbose >4)
-		PET_LOG(DEBUG, "forcing[%d] precip=%f", i, pet->forcing_data_precip_kg_per_m2[i]);
+		LOG(DEBUG, "forcing[%d] precip=%f", i, pet->forcing_data_precip_kg_per_m2[i]);
             pet->forcing_data_surface_pressure_Pa[i] = forcings.surface_pressure_Pa;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "surface pressure %f \n", pet->forcing_data_surface_pressure_Pa[i]);
+                LOG(DEBUG, "surface pressure %f \n", pet->forcing_data_surface_pressure_Pa[i]);
             pet->forcing_data_incoming_longwave_W_per_m2[i] = forcings.incoming_longwave_W_per_m2;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "longwave %f \n", pet->forcing_data_incoming_longwave_W_per_m2[i]);
+                LOG(DEBUG, "longwave %f \n", pet->forcing_data_incoming_longwave_W_per_m2[i]);
             pet->forcing_data_incoming_shortwave_W_per_m2[i] = forcings.incoming_shortwave_W_per_m2;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "shortwave %f \n", pet->forcing_data_incoming_shortwave_W_per_m2[i]);
+                LOG(DEBUG, "shortwave %f \n", pet->forcing_data_incoming_shortwave_W_per_m2[i]);
             pet->forcing_data_specific_humidity_2m_kg_per_kg[i] = forcings.specific_humidity_2m_kg_per_kg;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "humidity %f \n", pet->forcing_data_specific_humidity_2m_kg_per_kg[i]);
+                LOG(DEBUG, "humidity %f \n", pet->forcing_data_specific_humidity_2m_kg_per_kg[i]);
             pet->forcing_data_air_temperature_2m_K[i] = forcings.air_temperature_2m_K;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "air temperature %f \n", pet->forcing_data_air_temperature_2m_K[i]);
+                LOG(DEBUG, "air temperature %f \n", pet->forcing_data_air_temperature_2m_K[i]);
             pet->forcing_data_u_wind_speed_10m_m_per_s[i] = forcings.u_wind_speed_10m_m_per_s;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "u wind speed %f \n", pet->forcing_data_u_wind_speed_10m_m_per_s[i]);
+                LOG(DEBUG, "u wind speed %f \n", pet->forcing_data_u_wind_speed_10m_m_per_s[i]);
             pet->forcing_data_v_wind_speed_10m_m_per_s[i] = forcings.v_wind_speed_10m_m_per_s;
             if (pet->bmi.verbose >4)
-                PET_LOG(DEBUG, "v wind speed %f \n", pet->forcing_data_v_wind_speed_10m_m_per_s[i]);
+                LOG(DEBUG, "v wind speed %f \n", pet->forcing_data_v_wind_speed_10m_m_per_s[i]);
     
     
             pet->forcing_data_time[i] = forcings.time;
@@ -178,7 +172,7 @@ Initialize (Bmi *self, const char *cfg_file)
     //     middle of a forcing file?
     pet->bmi.current_step = 0;
 
-    PET_LOG(INFO,
+    LOG(INFO,
         "PET initialized successfully: forcing_from_bmi=%d num_timesteps=%ld dt=%f current_step=%ld",
             pet->bmi.is_forcing_from_bmi,
             pet->bmi.num_timesteps,
@@ -193,17 +187,17 @@ Update (Bmi *self)
     pet_model *pet = (pet_model *) self->data;
  
     if (self == NULL || self->data == NULL) {
-        PET_LOG(FATAL, "Update failed: self or self->data is NULL");
+        LOG(FATAL, "Update failed: self or self->data is NULL");
         return BMI_FAILURE;
     }
  
     if (pet->bmi.verbose > 1)
-        PET_LOG(DEBUG, "BMI Update PET: current_step=%ld current_time=%f",
+        LOG(DEBUG, "BMI Update PET: current_step=%ld current_time=%f",
                 pet->bmi.current_step, pet->bmi.current_time);
 
     //run_pet(pet);
     if (run_pet(pet) != BMI_SUCCESS) {
-        PET_LOG(SEVERE, "Update failed: run_pet returned failure");
+        LOG(FATAL, "Update failed: run_pet returned failure");
         return BMI_FAILURE;
     }
 
@@ -212,7 +206,7 @@ Update (Bmi *self)
     pet->bmi.current_time += pet->bmi.time_step_size_s;   // Seconds since 1970
 
     if (pet->bmi.verbose > 3)
-        PET_LOG(DEBUG, "BMI Update PET complete: new_step=%ld new_time=%f",
+        LOG(DEBUG, "BMI Update PET complete: new_step=%ld new_time=%f",
                 pet->bmi.current_step, pet->bmi.current_time);
     return BMI_SUCCESS;
 }
@@ -231,12 +225,12 @@ Update_until (Bmi *self, double t)
     double now;
 
     if (self->get_time_step(self, &dt) == BMI_FAILURE) {
-        PET_LOG(SEVERE, "Update_until failed: unable to get model time step");
+        LOG(FATAL, "Update_until failed: unable to get model time step");
         return BMI_FAILURE;
     }
 
     if (self->get_current_time(self, &now) == BMI_FAILURE) {
-        PET_LOG(SEVERE, "Update_until failed: unable to get current model time");
+        LOG(FATAL, "Update_until failed: unable to get current model time");
         return BMI_FAILURE;
     }
 
@@ -247,20 +241,20 @@ Update_until (Bmi *self, double t)
     const double n_steps = (t - now) / dt;
     for (n=0; n<(int)n_steps; n++) {
         if (Update(self) == BMI_FAILURE) {
-            PET_LOG(SEVERE, "Update_until failed during step %d of %d", n + 1, (int)n_steps);
+            LOG(FATAL, "Update_until failed during step %d of %d", n + 1, (int)n_steps);
             return BMI_FAILURE;
         }
     }
     frac = n_steps - (int)n_steps;
 
     if (frac > 0) {
-        PET_LOG(WARNING,
+        LOG(WARNING,
                 "Update_until requested fractional timestep: target=%f current=%f dt=%f fractional_part=%f",
                 t, now, dt, frac);
 
         pet->bmi.time_step_size_s = frac * dt;
         if (Update(self) == BMI_FAILURE) {
-            PET_LOG(SEVERE, "Update_until failed while processing fractional timestep");
+            LOG(FATAL, "Update_until failed while processing fractional timestep");
             pet->bmi.time_step_size_s = dt;
             return BMI_FAILURE;
         }
@@ -427,21 +421,21 @@ static int
 Finalize (Bmi *self)
 {
     if (self == NULL || self->data == NULL) {
-        PET_LOG(WARNING, "Finalize called with NULL self or self->data");
+        LOG(WARNING, "Finalize called with NULL self or self->data");
         return BMI_FAILURE;
     }
 
     pet_model *pet = (pet_model *) self->data;
 
     if (pet->bmi.run_unit_tests == 1) {
-        PET_LOG(INFO, "Running PET unit tests during Finalize");
+        LOG(INFO, "Running PET unit tests during Finalize");
         pet_unit_tests(pet);
     }
 
     free_pet_model(pet);
     self->data = (void*)new_bmi_pet();
 
-    PET_LOG(INFO, "PET finalized successfully");
+    LOG(INFO, "PET finalized successfully");
     return BMI_SUCCESS;
 }
 
@@ -611,7 +605,7 @@ static int Get_current_time (Bmi *self, double * time)
 {
     Get_start_time(self, time);
     if (((pet_model *) self->data)->bmi.verbose > 2){
-	PET_LOG(DEBUG, "Current model time step: %8.6e",
+	LOG(DEBUG, "Current model time step: %8.6e",
                 ((pet_model *) self->data)->bmi.current_time_step);
     }
     *time += (((pet_model *) self->data)->bmi.current_step * 
@@ -647,7 +641,7 @@ int read_file_line_counts_pet(const char* file_name, int* line_count, int* max_l
     FILE* fp = fopen(file_name, "r");
     // Ensure exists
     if (fp == NULL) {
-	PET_PERROR(SEVERE, "read_file_line_counts_pet failed to open file '%s'",
+	LOG(FATAL, "read_file_line_counts_pet failed to open file '%s'",
                    file_name ? file_name : "(null)");
         return -1;
     }
@@ -684,7 +678,7 @@ int read_file_line_counts_pet(const char* file_name, int* line_count, int* max_l
     // Before returning, increment the max line length by 1, since the \n will be on the line also.
     *max_line_length += 1;
 
-    PET_LOG(DEBUG, "Counted file '%s': line_count=%d max_line_length=%d",
+    LOG(DEBUG, "Counted file '%s': line_count=%d max_line_length=%d",
         file_name ? file_name : "(null)", *line_count, *max_line_length);
     return 0;
 }  // end: read_file_line_counts
@@ -695,28 +689,28 @@ int read_init_config_pet(pet_model* model, const char* config_file)
     int config_line_count, max_config_line_length;
 
     if (model == NULL) {
-        PET_LOG(FATAL, "read_init_config_pet called with NULL model");
+        LOG(FATAL, "read_init_config_pet called with NULL model");
         return BMI_FAILURE;
     }
 
     if (config_file == NULL) {
-        PET_LOG(FATAL, "read_init_config_pet called with NULL config_file");
+        LOG(FATAL, "read_init_config_pet called with NULL config_file");
         return BMI_FAILURE;
     }
 
     int count_result = read_file_line_counts_pet(config_file, &config_line_count, &max_config_line_length);
     if (count_result == -1) {
-        PET_LOG(SEVERE, "Unable to inspect PET config file '%s'", config_file);
+        LOG(FATAL, "Unable to inspect PET config file '%s'", config_file);
         return BMI_FAILURE;
     }
 
     FILE* fp = fopen(config_file, "r");
     if (fp == NULL) {
-        PET_PERROR(SEVERE, "Unable to open PET config file '%s'", config_file);
+        LOG(FATAL, "Unable to open PET config file '%s'", config_file);
         return BMI_FAILURE;
     }
 
-    PET_LOG(INFO, "Reading PET configuration from '%s'", config_file);
+    LOG(INFO, "Reading PET configuration from '%s'", config_file);
 
     char* ret = NULL;
 
@@ -728,7 +722,7 @@ int read_init_config_pet(pet_model* model, const char* config_file)
         char *param_key, *param_value;
         ret = fgets(config_line, max_config_line_length + 1, fp);
         if (ret == NULL) {
-            PET_LOG(SEVERE, "Failed to read config line %d from '%s'", i + 1, config_file);
+            LOG(FATAL, "Failed to read config line %d from '%s'", i + 1, config_file);
             fclose(fp);
             return BMI_FAILURE;
         }
@@ -738,16 +732,16 @@ int read_init_config_pet(pet_model* model, const char* config_file)
         param_value = strsep(&config_line_ptr, "=");
 
 	if (param_key == NULL || param_value == NULL) {
-            PET_LOG(WARNING, "Skipping malformed config line %d in '%s'", i + 1, config_file);
+            LOG(WARNING, "Skipping malformed config line %d in '%s'", i + 1, config_file);
             continue;
         }
         if (strcmp(param_key, "verbose") == 0){
             model->bmi.verbose = strtod(param_value, NULL);
             if(model->bmi.verbose > 1){
-                PET_LOG(INFO, "printing some stuff (level > 1) for unit tests and troubleshooting \n");
+                LOG(INFO, "printing some stuff (level > 1) for unit tests and troubleshooting \n");
             }
             if(model->bmi.verbose > 2){
-                PET_LOG(INFO, "printing a lot of stuff (level > 2) for unit tests and troubleshooting \n");
+                LOG(INFO, "printing a lot of stuff (level > 2) for unit tests and troubleshooting \n");
             }
 	    continue;    
         }
@@ -755,16 +749,16 @@ int read_init_config_pet(pet_model* model, const char* config_file)
         if (strcmp(param_key, "pet_method") == 0){
             model->pet_method = strtod(param_value, NULL);
             if(model->bmi.verbose > 1){
-                PET_LOG(DEBUG, "set PET method from config file \n");
-                PET_LOG(DEBUG, "%d\n", model->pet_method);
+                LOG(DEBUG, "set PET method from config file \n");
+                LOG(DEBUG, "%d\n", model->pet_method);
             }
 	    continue;    
         }
         if (strcmp(param_key, "yes_aorc") == 0) {
             model->pet_options.yes_aorc = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "set aorc boolean from config file \n");
-                PET_LOG(DEBUG, "%d\n", model->pet_options.yes_aorc);
+                LOG(DEBUG, "set aorc boolean from config file \n");
+                LOG(DEBUG, "%d\n", model->pet_options.yes_aorc);
             }
             continue;
         }
@@ -772,84 +766,84 @@ int read_init_config_pet(pet_model* model, const char* config_file)
             model->forcing_file = strdup(param_value);
             if (strcmp(model->forcing_file,"BMI") == 0){
                 if(model->bmi.verbose >=2)
-                    PET_LOG(DEBUG, "in pet_setup: Getting forcing values from BMI. Not reading in forcing from file. \n");
+                    LOG(DEBUG, "in pet_setup: Getting forcing values from BMI. Not reading in forcing from file. \n");
                 model->bmi.is_forcing_from_bmi = 1;
             }
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "set forcing file from config file \n");
-                PET_LOG(DEBUG, "%s\n", model->forcing_file);
+                LOG(DEBUG, "set forcing file from config file \n");
+                LOG(DEBUG, "%s\n", model->forcing_file);
             }
             continue;
         }
         if (strcmp(param_key, "wind_speed_measurement_height_m") == 0) {
             model->pet_params.wind_speed_measurement_height_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "set wind speed measurement height from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->pet_params.wind_speed_measurement_height_m);
+                LOG(DEBUG, "set wind speed measurement height from config file \n");
+                LOG(DEBUG, "%lf\n", model->pet_params.wind_speed_measurement_height_m);
             }
             continue;
         }
         if (strcmp(param_key, "humidity_measurement_height_m") == 0) {
             model->pet_params.humidity_measurement_height_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "set humidity measurement height from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->pet_params.humidity_measurement_height_m);
+                LOG(DEBUG, "set humidity measurement height from config file \n");
+                LOG(DEBUG, "%lf\n", model->pet_params.humidity_measurement_height_m);
             }
             continue;
         }
         if (strcmp(param_key, "vegetation_height_m") == 0) {
             model->pet_params.vegetation_height_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "vegetation height from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->pet_params.vegetation_height_m);
+                LOG(DEBUG, "vegetation height from config file \n");
+                LOG(DEBUG, "%lf\n", model->pet_params.vegetation_height_m);
             }
             continue;
         }
         if (strcmp(param_key, "zero_plane_displacement_height_m") == 0) {
             model->pet_params.zero_plane_displacement_height_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "zero_plane_displacement height from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->pet_params.zero_plane_displacement_height_m);
+                LOG(DEBUG, "zero_plane_displacement height from config file \n");
+                LOG(DEBUG, "%lf\n", model->pet_params.zero_plane_displacement_height_m);
             }
             continue;
         }
         if (strcmp(param_key, "shortwave_radiation_provided") == 0) {
             model->pet_options.shortwave_radiation_provided = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "shortwave radiation provided boolean from config file \n");
-                PET_LOG(DEBUG, "%d\n", model->pet_options.shortwave_radiation_provided);
+                LOG(DEBUG, "shortwave radiation provided boolean from config file \n");
+                LOG(DEBUG, "%d\n", model->pet_options.shortwave_radiation_provided);
             }
             continue;
         }
         if (strcmp(param_key, "momentum_transfer_roughness_length_m") == 0) {
             model->pet_params.momentum_transfer_roughness_length_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "momentum_transfer_roughness_length_m from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->pet_params.momentum_transfer_roughness_length_m);
+                LOG(DEBUG, "momentum_transfer_roughness_length_m from config file \n");
+                LOG(DEBUG, "%lf\n", model->pet_params.momentum_transfer_roughness_length_m);
             }
             continue;
         }
         if (strcmp(param_key, "heat_transfer_roughness_length_m") == 0) {
             model->pet_params.heat_transfer_roughness_length_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "heat_transfer_roughness_length_m from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->pet_params.heat_transfer_roughness_length_m);
+                LOG(DEBUG, "heat_transfer_roughness_length_m from config file \n");
+                LOG(DEBUG, "%lf\n", model->pet_params.heat_transfer_roughness_length_m);
             }
             continue;
         }
         if (strcmp(param_key, "surface_longwave_emissivity") == 0) {
             model->surf_rad_params.surface_longwave_emissivity = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "surface_longwave_emissivity from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_longwave_emissivity);
+                LOG(DEBUG, "surface_longwave_emissivity from config file \n");
+                LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_longwave_emissivity);
             }
             continue;
         }
         if (strcmp(param_key, "surface_shortwave_albedo") == 0) {
             model->surf_rad_params.surface_shortwave_albedo = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "surface_shortwave_albedo from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
+                LOG(DEBUG, "surface_shortwave_albedo from config file \n");
+                LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
             }
             continue;
         }
@@ -858,60 +852,60 @@ int read_init_config_pet(pet_model* model, const char* config_file)
         //if (strcmp(param_key, "surface_shortwave_albedo") == 0) {
         //    model->surf_rad_params.surface_shortwave_albedo = strtod(param_value, NULL);
         //    if(model->bmi.verbose >=2){
-        //         PET_LOG(DEBUG, "surface_shortwave_albedo from config file \n");
-        //        PET_LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
+        //         LOG(DEBUG, "surface_shortwave_albedo from config file \n");
+        //        LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
         //    }
         //    continue;
         //}
         if (strcmp(param_key, "latitude_degrees") == 0) {
             model->solar_params.latitude_degrees = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "latitude_degrees from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->solar_params.latitude_degrees);
+                LOG(DEBUG, "latitude_degrees from config file \n");
+                LOG(DEBUG, "%lf\n", model->solar_params.latitude_degrees);
             }
             continue;
         }
         if (strcmp(param_key, "longitude_degrees") == 0) {
             model->solar_params.longitude_degrees = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "longitude_degrees from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->solar_params.longitude_degrees);
+                LOG(DEBUG, "longitude_degrees from config file \n");
+                LOG(DEBUG, "%lf\n", model->solar_params.longitude_degrees);
             }
             continue;
         }
         if (strcmp(param_key, "site_elevation_m") == 0) {
             model->solar_params.site_elevation_m = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "site_elevation_m from config file \n");
-                PET_LOG(DEBUG, "%lf\n", model->solar_params.site_elevation_m);
+                LOG(DEBUG, "site_elevation_m from config file \n");
+                LOG(DEBUG, "%lf\n", model->solar_params.site_elevation_m);
             }
             continue;
         }
         if (strcmp(param_key, "time_step_size_s") == 0) {
             model->bmi.time_step_size_s = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "time_step_size_s from config file \n");
-                PET_LOG(DEBUG, "%f\n", model->bmi.time_step_size_s);
+                LOG(DEBUG, "time_step_size_s from config file \n");
+                LOG(DEBUG, "%f\n", model->bmi.time_step_size_s);
             }
             continue;
         }
         if (strcmp(param_key, "num_timesteps") == 0) {
             model->bmi.num_timesteps = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "num_timesteps from config file \n");
-                PET_LOG(DEBUG, "%ld\n", model->bmi.num_timesteps);
+                LOG(DEBUG, "num_timesteps from config file \n");
+                LOG(DEBUG, "%ld\n", model->bmi.num_timesteps);
             }
             continue;
         }
         if (strcmp(param_key, "run_unit_tests") == 0) {
             model->bmi.run_unit_tests = strtod(param_value, NULL);
             if(model->bmi.verbose >=2){
-                PET_LOG(DEBUG, "Running unit tests \n");
+                LOG(DEBUG, "Running unit tests \n");
             }
             continue;
         }
        
-        PET_LOG(WARNING, "Unrecognized config key '%s' in '%s'", param_key, config_file);
+        LOG(WARNING, "Unrecognized config key '%s' in '%s'", param_key, config_file);
     } // end loop through config
     fclose(fp);
     return BMI_SUCCESS;
@@ -1119,7 +1113,7 @@ static int Get_value_ptr (Bmi *self, const char *name, void **dest)
         pet_model *pet = (pet_model *)self->data;
         if (pet->serialized == NULL) {
             // Log(SEVERE, "PET serialization has not been.");
-	    PET_LOG(SEVERE, "serialization_size requested before serialization state was created");
+	    LOG(FATAL, "serialization_size requested before serialization state was created");
             return BMI_FAILURE;
         }
         *dest = &pet->serialized_length;
@@ -1129,7 +1123,7 @@ static int Get_value_ptr (Bmi *self, const char *name, void **dest)
         pet_model *pet = (pet_model *)self->data;
         if (pet->serialized == NULL) {
             // Log(SEVERE, "PET serialization has not been.");
-	    PET_LOG(SEVERE, "serialization_state requested before serialization state was created");
+	    LOG(FATAL, "serialization_state requested before serialization state was created");
             return BMI_FAILURE;
         }
         *dest = pet->serialized;
@@ -1146,13 +1140,13 @@ static int Get_value_at_indices (Bmi *self, const char *name, void *dest, int * 
     int itemsize = 0;
 
     if (self->get_value_ptr(self, name, &src) == BMI_FAILURE){
-	PET_LOG(SEVERE, "Get_value_at_indices failed: unknown or inaccessible variable '%s'",
+	LOG(FATAL, "Get_value_at_indices failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }	
 
     if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE){
-	PET_LOG(SEVERE, "Get_value_at_indices failed: unknown item size for variable '%s'",
+	LOG(FATAL, "Get_value_at_indices failed: unknown item size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
@@ -1177,13 +1171,13 @@ static int Get_value(Bmi * self, const char * name, void *dest)
     int nbytes = 0;
 
     if (self->get_value_ptr (self, name, &src) == BMI_FAILURE) {
-        PET_LOG(SEVERE, "Get_value failed: unknown or inaccessible variable '%s'",
+        LOG(FATAL, "Get_value failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
 
     if (self->get_var_nbytes (self, name, &nbytes) == BMI_FAILURE){
-        PET_LOG(SEVERE, "Get_value failed: unable to determine size for variable '%s'",
+        LOG(FATAL, "Get_value failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
@@ -1209,13 +1203,13 @@ static int Set_value (Bmi *self, const char *name, void *array)
     int nbytes = 0;
 
     if (self->get_value_ptr(self, name, &dest) == BMI_FAILURE) {
-        PET_LOG(SEVERE, "Set_value failed: unknown or inaccessible variable '%s'",
+        LOG(FATAL, "Set_value failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
 
     if (self->get_var_nbytes(self, name, &nbytes) == BMI_FAILURE) {
-        PET_LOG(SEVERE, "Set_value failed: unable to determine size for variable '%s'",
+        LOG(FATAL, "Set_value failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
@@ -1233,12 +1227,12 @@ static int Set_value_at_indices (Bmi *self, const char *name, int * inds, int le
     int itemsize = 0;
 
     if (self->get_value_ptr (self, name, &to) == BMI_FAILURE){
-	PET_LOG(SEVERE, "Set_value_at_indices failed: unknown or inaccessible variable '%s'",
+	LOG(FATAL, "Set_value_at_indices failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
     if (self->get_var_itemsize(self, name, &itemsize) == BMI_FAILURE){
-	PET_LOG(SEVERE, "Set_value_at_indices failed: unable to determine size for variable '%s'",
+	LOG(FATAL, "Set_value_at_indices failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }	
@@ -1315,7 +1309,7 @@ static int Get_var_units (Bmi *self, const char *name, char * units)
     }
     // If we get here, it means the variable name wasn't recognized
     units[0] = '\0';
-    PET_LOG(SEVERE, "Get_var_units failed: unknown or inaccessible variable '%s'",
+    LOG(FATAL, "Get_var_units failed: unknown or inaccessible variable '%s'",
                 name ? name : "(null)");
     return BMI_FAILURE;
 }
@@ -1338,7 +1332,7 @@ static int Get_var_nbytes (Bmi *self, const char *name, int * nbytes)
     int item_size;
     int item_size_result = Get_var_itemsize(self, name, &item_size);
     if (item_size_result != BMI_SUCCESS) {
-        PET_LOG(SEVERE, "Get_var_nbytes failed: unable to determine size for variable '%s'",
+        LOG(FATAL, "Get_var_nbytes failed: unable to determine size for variable '%s'",
                 name ? name : "(null)");
         return BMI_FAILURE;
     }
@@ -1377,7 +1371,7 @@ static int Get_grid_rank (Bmi *self, int grid, int * rank)
     }
     else {
         *rank = -1;
-	PET_LOG(SEVERE,
+	LOG(FATAL,
             "Get_grid_rank failed: unable to determine rank for grid %d", grid);
         return BMI_FAILURE;
     }
@@ -1392,7 +1386,7 @@ static int Get_grid_size(Bmi *self, int grid, int * size)
     }
     else {
         *size = -1;
-	PET_LOG(SEVERE,
+	LOG(FATAL,
             "Get_grid_size failed: unable to determine size for grid %d", grid);
         return BMI_FAILURE;
     }
@@ -1409,7 +1403,7 @@ static int Get_grid_type (Bmi *self, int grid, char * type)
     }
     else {
         type[0] = '\0';
-	PET_LOG(SEVERE,
+	LOG(FATAL,
             "Get_grid_type failed: unable to determine type for grid %d", grid);
         status = BMI_FAILURE;
     }
@@ -1420,7 +1414,7 @@ static int Get_grid_type (Bmi *self, int grid, char * type)
 /* Uniform rectilinear (grid type) */
 static int Get_grid_shape(Bmi *self, int grid, int *shape)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_shape failed: unable to determine shape for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1428,7 +1422,7 @@ static int Get_grid_shape(Bmi *self, int grid, int *shape)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_spacing(Bmi *self, int grid, double *spacing)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_spacing failed: unable to determine spacing for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1436,7 +1430,7 @@ static int Get_grid_spacing(Bmi *self, int grid, double *spacing)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_origin(Bmi *self, int grid, double *origin)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_origin failed: unable to determine origin for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1445,7 +1439,7 @@ static int Get_grid_origin(Bmi *self, int grid, double *origin)
 /* Non-uniform rectilinear, curvilinear (grid type)*/
 static int Get_grid_x(Bmi *self, int grid, double *x)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
             "Get_grid_x failed: unable to determine x value for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1453,7 +1447,7 @@ static int Get_grid_x(Bmi *self, int grid, double *x)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_y(Bmi *self, int grid, double *y)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_y failed: unable to determine y value for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1461,7 +1455,7 @@ static int Get_grid_y(Bmi *self, int grid, double *y)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_z(Bmi *self, int grid, double *z)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_z failed: unable to determine z value for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1470,7 +1464,7 @@ static int Get_grid_z(Bmi *self, int grid, double *z)
 /*Unstructured (grid type)*/
 static int Get_grid_node_count(Bmi *self, int grid, int *count)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_node_count failed: unable to determine node count for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1478,7 +1472,7 @@ static int Get_grid_node_count(Bmi *self, int grid, int *count)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_edge_count(Bmi *self, int grid, int *count)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_edge_count failed: unable to determine edge count for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1486,7 +1480,7 @@ static int Get_grid_edge_count(Bmi *self, int grid, int *count)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_face_count(Bmi *self, int grid, int *count)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_face_count failed: unable to determine face count for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1494,7 +1488,7 @@ static int Get_grid_face_count(Bmi *self, int grid, int *count)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_edge_nodes(Bmi *self, int grid, int *edge_nodes)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_edge_nodes failed: unable to determine edge nodes for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1502,7 +1496,7 @@ static int Get_grid_edge_nodes(Bmi *self, int grid, int *edge_nodes)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_face_edges(Bmi *self, int grid, int *face_edges)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_face_edges failed: unable to determine face edges for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1510,7 +1504,7 @@ static int Get_grid_face_edges(Bmi *self, int grid, int *face_edges)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_face_nodes(Bmi *self, int grid, int *face_nodes)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_face_nodes failed: unable to determine face node for grid %d", grid);
     return BMI_FAILURE;
 }
@@ -1518,7 +1512,7 @@ static int Get_grid_face_nodes(Bmi *self, int grid, int *face_nodes)
 //---------------------------------------------------------------------------------------------------------------------
 static int Get_grid_nodes_per_face(Bmi *self, int grid, int *nodes_per_face)
 {
-    PET_LOG(SEVERE,
+    LOG(FATAL,
         "Get_grid_nodes_per_face failed: unable to determine node per face for grid %d", grid);
     return BMI_FAILURE;
 }

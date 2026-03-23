@@ -16,8 +16,6 @@
 #include "../include/PEtPriestleyTaylorMethod.h"
 #include "../include/PEtPenmanMonteithMethod.h"
 #include "../include/logger.h"
-#define PET_LOG(level, fmt, ...) \
-    Log((level), "PET: " fmt, ##__VA_ARGS__)
 
 extern void alloc_pet_model(pet_model *model) {
     // TODO: *******************
@@ -25,11 +23,11 @@ extern void alloc_pet_model(pet_model *model) {
 
 extern void free_pet_model(pet_model *model) {
     if (model == NULL) {
-        PET_LOG(WARNING, "free_pet_model called with NULL model");
+        LOG(WARNING, "free_pet_model called with NULL model");
         return;
     }
 
-    PET_LOG(DEBUG, "Freeing PET model resources");
+    LOG(DEBUG, "Freeing PET model resources");
 
     if (model != NULL) {
       // serialized data
@@ -62,7 +60,7 @@ extern void free_pet_model(pet_model *model) {
 
       free(model);
     }
-    PET_LOG(DEBUG, "PET model resources freed");
+    LOG(DEBUG, "PET model resources freed");
 }
 
 // ######################    RUN    ########    RUN    ########    RUN    ########    RUN    #################################
@@ -72,13 +70,13 @@ extern void free_pet_model(pet_model *model) {
 extern int run_pet(pet_model* model)
 {
   if (model == NULL) {
-    PET_LOG(FATAL, "run_pet called with NULL model");
+    LOG(FATAL, "run_pet called with NULL model");
     return 1;
   }
 
   if (model->bmi.verbose > 2) {
-    PET_LOG(DEBUG, "Running PET model");
-    PET_LOG(DEBUG, "is_forcing_from_bmi=%d current_step=%ld current_time=%f",
+    LOG(DEBUG, "Running PET model");
+    LOG(DEBUG, "is_forcing_from_bmi=%d current_step=%ld current_time=%f",
             model->bmi.is_forcing_from_bmi,
             model->bmi.current_step,
             model->bmi.current_time);
@@ -94,7 +92,7 @@ extern int run_pet(pet_model* model)
 
   if (model->bmi.is_forcing_from_bmi == 0) {
     if (model->bmi.current_step < 0 || model->bmi.current_step >= model->bmi.num_timesteps) {
-      PET_LOG(SEVERE,
+      LOG(SEVERE,
               "run_pet forcing index out of bounds: current_step=%ld num_timesteps=%ld",
               model->bmi.current_step, model->bmi.num_timesteps);
       return -1;
@@ -118,7 +116,7 @@ extern int run_pet(pet_model* model)
   if(model->pet_options.yes_aorc==1)
   {
     if (model->bmi.verbose >1)
-	PET_LOG(DEBUG, "Using AORC forcing pathway");
+	LOG(DEBUG, "Using AORC forcing pathway");
     
     /* jmframe: If we are getting forcing through BMI, then we don't need this, the forcings should already be in place */
     if (model->bmi.is_forcing_from_bmi == 0){
@@ -143,7 +141,7 @@ extern int run_pet(pet_model* model)
                              model->pet_params.zero_plane_displacement_height_m);
 
     if (denominator == 0.0) {
-        PET_LOG(SEVERE,
+        LOG(SEVERE,
                 "Invalid wind-speed height adjustment: denominator is zero "
                 "(wind_height=%f zero_plane=%f)",
                 model->pet_params.wind_speed_measurement_height_m,
@@ -180,7 +178,7 @@ extern int run_pet(pet_model* model)
   if(model->pet_options.use_aerodynamic_method==0) 
   {
     if (model->bmi.verbose > 1)
-      PET_LOG(DEBUG, "calculate the net radiation before calling the PET subroutine");
+      LOG(DEBUG, "calculate the net radiation before calling the PET subroutine");
     // NOTE don't call this function use_aerodynamic_method option is TRUE
     model->pet_forcing.net_radiation_W_per_sq_m=calculate_net_radiation_W_per_sq_m(model);
   }
@@ -198,27 +196,27 @@ extern int run_pet(pet_model* model)
 
   // prevent dew from forming (i.e., PET < 0)
   if (model->pet_m_per_s < 0) {
-    PET_LOG(WARNING, "Computed PET was negative (%e); clamping to zero", model->pet_m_per_s);
+    LOG(WARNING, "Computed PET was negative (%e); clamping to zero", model->pet_m_per_s);
     model->pet_m_per_s = 0;
   }
 
   if (model->bmi.verbose >= 1) {
-    PET_LOG(INFO, "Calculated instantaneous PET = %8.6e m/s", model->pet_m_per_s);
+    LOG(INFO, "Calculated instantaneous PET = %8.6e m/s", model->pet_m_per_s);
 
     if (model->pet_options.use_energy_balance_method == 1)
-      PET_LOG(INFO, "PET method: energy balance");
+      LOG(INFO, "PET method: energy balance");
     if (model->pet_options.use_aerodynamic_method == 1)
-      PET_LOG(INFO, "PET method: aerodynamic");
+      LOG(INFO, "PET method: aerodynamic");
     if (model->pet_options.use_combination_method == 1)
-      PET_LOG(INFO, "PET method: combination");
+      LOG(INFO, "PET method: combination");
     if (model->pet_options.use_priestley_taylor_method == 1)
-      PET_LOG(INFO, "PET method: Priestley-Taylor");
+      LOG(INFO, "PET method: Priestley-Taylor");
     if (model->pet_options.use_penman_monteith_method == 1)
-      PET_LOG(INFO, "PET method: Penman-Monteith");
+      LOG(INFO, "PET method: Penman-Monteith");
 
-    PET_LOG(DEBUG, "calculated instantaneous potential evapotranspiration (PET) =%8.6e m/s\n",model->pet_m_per_s);
+    LOG(DEBUG, "calculated instantaneous potential evapotranspiration (PET) =%8.6e m/s\n",model->pet_m_per_s);
     if (model->bmi.verbose > 1)
-      PET_LOG(INFO, "Calculated instantaneous PET = %8.6lf mm/d",
+      LOG(INFO, "Calculated instantaneous PET = %8.6lf mm/d",
               model->pet_m_per_s * 86400.0 * 1000.0);
   }
 
@@ -232,10 +230,10 @@ extern int run_pet(pet_model* model)
 void pet_setup(pet_model* model)
 {
   if (model == NULL) {
-    PET_LOG(FATAL, "pet_setup called with NULL model");
+    LOG(FATAL, "pet_setup called with NULL model");
     return;
   }
-  PET_LOG(INFO, "Setting up PET model (pet_method=%d)", model->pet_method);
+  LOG(INFO, "Setting up PET model (pet_method=%d)", model->pet_method);
 
   //##########################################################
   // THE VALUE OF THESE FLAGS DETERMINE HOW THIS CODE BEHAVES.
@@ -310,7 +308,7 @@ void pet_setup(pet_model* model)
 
   if(model->pet_options.shortwave_radiation_provided==0)
   {
-    PET_LOG(DEBUG, "Shortwave radiation not provided; PET will calculate solar radiation");
+    LOG(DEBUG, "Shortwave radiation not provided; PET will calculate solar radiation");
   
     // populate the elements of the structures needed to calculate shortwave (solar) radiation, and calculate it
     // ### OPTIONS ###
@@ -346,39 +344,39 @@ void pet_setup(pet_model* model)
 void pet_unit_tests(pet_model* model)
 {
   if (model == NULL) {
-    PET_LOG(SEVERE, "pet_unit_tests called with NULL model");
+    LOG(SEVERE, "pet_unit_tests called with NULL model");
     return;
   }
 
-  PET_LOG(INFO, "Beginning PET unit tests");
-  PET_LOG(INFO, "Solar calculations assume LAT/LON from PET config and pet_doy=208, pet_zulu_time=20.567");
+  LOG(INFO, "Beginning PET unit tests");
+  LOG(INFO, "Solar calculations assume LAT/LON from PET config and pet_doy=208, pet_zulu_time=20.567");
 
-  PET_LOG(INFO, "solar elevation angle is %lf degrees, expected 43.168329",
+  LOG(INFO, "solar elevation angle is %lf degrees, expected 43.168329",
           model->solar_results.solar_elevation_angle_degrees);
 
-  PET_LOG(INFO, "solar azimuth angle is %lf degrees, expected 224.010087",
+  LOG(INFO, "solar azimuth angle is %lf degrees, expected 224.010087",
           model->solar_results.solar_azimuth_angle_degrees);
 
-  PET_LOG(INFO, "solar local hour angle is %lf degrees, expected 30.447448",
+  LOG(INFO, "solar local hour angle is %lf degrees, expected 30.447448",
           model->solar_results.solar_local_hour_angle_degrees);
 
   if (model->pet_options.use_energy_balance_method == 1)
-      PET_LOG(INFO, "potential ET is %8.6e m/s, expected 8.594743e-08",
+      LOG(INFO, "potential ET is %8.6e m/s, expected 8.594743e-08",
               model->pet_m_per_s);
   if (model->pet_options.use_aerodynamic_method == 1)
-      PET_LOG(INFO, "potential ET is %8.6e m/s, expected 8.977490e-08",
+      LOG(INFO, "potential ET is %8.6e m/s, expected 8.977490e-08",
               model->pet_m_per_s);
   if (model->pet_options.use_combination_method == 1)
-      PET_LOG(INFO, "potential ET is %8.6e m/s, expected 8.694909e-08",
+      LOG(INFO, "potential ET is %8.6e m/s, expected 8.694909e-08",
               model->pet_m_per_s);
   if (model->pet_options.use_priestley_taylor_method == 1)
-      PET_LOG(INFO, "potential ET is %8.6e m/s, expected 8.249098e-08",
+      LOG(INFO, "potential ET is %8.6e m/s, expected 8.249098e-08",
               model->pet_m_per_s);
   if (model->pet_options.use_penman_monteith_method == 1)
-      PET_LOG(INFO, "potential ET is %8.6e m/s, expected 7.628671e-08",
+      LOG(INFO, "potential ET is %8.6e m/s, expected 7.628671e-08",
               model->pet_m_per_s);
 
-  PET_LOG(INFO, "Completed PET unit tests");
+  LOG(INFO, "Completed PET unit tests");
   return;
 }
 
@@ -397,7 +395,7 @@ void pet_unit_tests(pet_model* model)
 void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, long *hour, long *minute, double *second,
                      struct aorc_forcing_data_pet *aorc) {
     if (theString == NULL || aorc == NULL) {
-        PET_LOG(SEVERE, "parse_aorc_line_pet called with NULL input");
+        LOG(SEVERE, "parse_aorc_line_pet called with NULL input");
         return;
     }
 
@@ -414,7 +412,7 @@ void parse_aorc_line_pet(char *theString, long *year, long *month, long *day, lo
     char *copy, *copy_to_free, *value;
     copy_to_free = copy = strdup(theString);
     if (copy_to_free == NULL) {
-        PET_LOG(FATAL, "parse_aorc_line_pet failed to duplicate input line");
+        LOG(FATAL, "parse_aorc_line_pet failed to duplicate input line");
         return;
     }
     // time
@@ -522,7 +520,7 @@ void itwo_alloc_pet(int ***array, int rows, int cols) {
     int error = 0;
 
     if ((rows == 0) || (cols == 0)) {
-	PET_LOG(FATAL, "Attempting to allocate int array with zero dimension (rows=%d cols=%d)", rows, cols);
+	LOG(FATAL, "Attempting to allocate int array with zero dimension (rows=%d cols=%d)", rows, cols);
         exit(1);
     }
 
@@ -544,9 +542,9 @@ void itwo_alloc_pet(int ***array, int rows, int cols) {
     }
 
     if (error) {
-        PET_LOG(FATAL, "Failed allocating int matrix at row %d of %d", numgood, frows);
+        LOG(FATAL, "Failed allocating int matrix at row %d of %d", numgood, frows);
     } else {
-        PET_LOG(DEBUG, "Allocated int matrix rows=%d cols=%d", rows, cols);
+        LOG(DEBUG, "Allocated int matrix rows=%d cols=%d", rows, cols);
     }
     return;
 }
@@ -557,7 +555,7 @@ void dtwo_alloc_pet(double ***array, int rows, int cols) {
     int error = 0;
 
     if ((rows == 0) || (cols == 0)) {
-        PET_LOG(FATAL, "Attempting to allocate double array with zero dimension (rows=%d cols=%d)", rows, cols);
+        LOG(FATAL, "Attempting to allocate double array with zero dimension (rows=%d cols=%d)", rows, cols);
         exit(1);
     }
 
@@ -578,9 +576,9 @@ void dtwo_alloc_pet(double ***array, int rows, int cols) {
         }
     }
     if (error) {
-        PET_LOG(FATAL, "Failed allocating double matrix at row %d of %d", numgood, frows);
+        LOG(FATAL, "Failed allocating double matrix at row %d of %d", numgood, frows);
     } else {
-        PET_LOG(DEBUG, "Allocated double matrix rows=%d cols=%d", rows, cols);
+        LOG(DEBUG, "Allocated double matrix rows=%d cols=%d", rows, cols);
     }
     return;
 }
@@ -591,7 +589,7 @@ void d_alloc_pet(double **var, int size) {
 
     *var = (double *) malloc(size * sizeof(double));
     if (*var == NULL) {
-        PET_LOG(FATAL, "Problem allocating memory for array in d_alloc.\n");
+        LOG(FATAL, "Problem allocating memory for array in d_alloc.\n");
         return;
     } else
         memset(*var, 0, size * sizeof(double));
@@ -603,7 +601,7 @@ void i_alloc_pet(int **var, int size) {
 
     *var = (int *) malloc(size * sizeof(int));
     if (*var == NULL) {
-        PET_LOG(FATAL, "Problem allocating memory in i_alloc\n");
+        LOG(FATAL, "Problem allocating memory in i_alloc\n");
         return;
     } else
         memset(*var, 0, size * sizeof(int));
