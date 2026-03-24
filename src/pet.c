@@ -66,7 +66,8 @@ extern int run_pet(pet_model* model)
   }
   if (model->pet_params.zero_plane_displacement_height_m <= 0.0){
     fprintf(stderr, "ERROR: zero_plane_displacement_height_m must be > 0.0 m. Current value: %lf\n", model->pet_params.zero_plane_displacement_height_m);
-    // exit(EXIT_FAILURE); //Disabling Exit as suggested
+    //LOG(FATAL, "ERROR: zero_plane_displacement_height_m must be > 0.0 m. Current value: %lf\n", model->pet_params.zero_plane_displacement_height_m);
+    exit(EXIT_FAILURE);
   }
   // populate the evapotranspiration forcing data structure:
   //---------------------------------------------------------------------------------------------------------------
@@ -100,7 +101,8 @@ extern int run_pet(pet_model* model)
     if(model->pet_params.humidity_measurement_height_m !=2.0)
     {
         fprintf(stderr, "ERROR: humidity measurement height is not 2.0 m. Humidity adjustment not yet implemented. Current value: %lf\n", model->pet_params.humidity_measurement_height_m);
-        // exit(EXIT_FAILURE); //Disabling Exit as suggested
+        //LOG(FATAL, "ERROR: humidity measurement height is not 2.0 m. Humidity adjustment not yet implemented. Current value: %lf\n", model->pet_params.humidity_measurement_height_m);
+	exit(EXIT_FAILURE); 
     }
     /* jmframe: If we are getting forcing through BMI, then we don't need this, the forcings should already be in place */
     if (model->bmi.is_forcing_from_bmi == 0){
