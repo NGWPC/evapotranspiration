@@ -943,6 +943,8 @@ static int Get_var_type (Bmi *self, const char *name, char * type)
     }
     // If we get here, it means the variable name wasn't recognized
     type[0] = '\0';
+    LOG(FATAL, "Get_var_type failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
     return BMI_FAILURE;
 }
 
@@ -951,6 +953,8 @@ static int Get_var_itemsize (Bmi *self, const char *name, int * size)
     char type[BMI_MAX_TYPE_NAME];
     int type_result = Get_var_type(self, name, type);
     if (type_result != BMI_SUCCESS) {
+	LOG(FATAL, "Get_var_itemsize failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
     }
 
@@ -984,6 +988,8 @@ static int Get_var_itemsize (Bmi *self, const char *name, int * size)
     }
     else {
         *size = 0;
+	LOG(FATAL, "Get_var_itemsie failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
         return BMI_FAILURE;
     }
 }
@@ -1011,6 +1017,8 @@ static int Get_var_location (Bmi *self, const char *name, char * location)
     }
     // If we get here, it means the variable name wasn't recognized
     location[0] = '\0';
+    LOG(FATAL, "Get_var_location failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
     return BMI_FAILURE;
 }
 
@@ -1035,6 +1043,8 @@ static int Get_var_grid(Bmi *self, const char *name, int *grid)
     // If we get here, it means the variable name wasn't recognized
     // grid[0] = '\0';
     *grid = -1;
+    LOG(FATAL, "Get_var_grid failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
     return BMI_FAILURE;
 }
 
@@ -1130,6 +1140,8 @@ static int Get_value_ptr (Bmi *self, const char *name, void **dest)
         return BMI_SUCCESS;
     }
 
+    LOG(FATAL, "Get_value_ptr failed: unknown or inaccessible variable '%s'",
+                name ? name : "(null)");
     return BMI_FAILURE;
 }
 
