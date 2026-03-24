@@ -93,6 +93,13 @@ void pass_forcing_from_aorc_to_pet(Bmi *pet_bmi_model, Bmi *aorc_bmi_model)
 ************************************************************************/
 int main(int argc, const char *argv[])
 {
+
+    #ifdef EWTS_HAVE_NGEN_BRIDGE
+        EwtsInit(EWTS_ID_PET, true);
+    #else
+        EwtsInit(EWTS_ID_PET, false);
+    #endif
+
     if (argc <= 1) {
         LOG(FATAL, "Missing PET config file argument");
         exit(1);
