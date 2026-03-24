@@ -132,9 +132,20 @@ extern int run_pet(pet_model* model)
     // Validate AORC humidity measurement height
     if(model->pet_params.humidity_measurement_height_m !=2.0)
     {
-        fprintf(stderr, "ERROR: humidity measurement height is not 2.0 m. Humidity adjustment not yet implemented. Current value: %lf\n", model->pet_params.humidity_measurement_height_m);
-        LOG(FATAL, "ERROR: humidity measurement height is not 2.0 m. Humidity adjustment not yet implemented. Current value: %lf\n", model->pet_params.humidity_measurement_height_m);
-	exit(EXIT_FAILURE); 
+        fprintf(stderr,
+            "ERROR: Humidity measurement height must be 2.0 m (adjustment not implemented). "
+            "Received %lf; overriding to 2.0 m.",
+             model->pet_params.humidity_measurement_height_m);
+
+
+        LOG(SEVERE,
+            "Humidity measurement height must be 2.0 m (adjustment not implemented). "
+            "Received %lf; overriding to 2.0 m.",
+             model->pet_params.humidity_measurement_height_m);
+
+        model->pet_params.humidity_measurement_height_m = 2.0;
+
+	//exit(EXIT_FAILURE); 
     }
 	LOG(DEBUG, "Using AORC forcing pathway");
     
