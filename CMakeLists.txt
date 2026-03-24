@@ -49,12 +49,11 @@ target_link_libraries(petbmi
 # Force retention of the ngen bridge shared library at runtime.
 # The bridge hook is weak, so ordinary linking can drop the shared library.
 if(NOT WIN32)
-    target_link_libraries(petbmi
-        PRIVATE
-            "-Wl,--no-as-needed"
-            "-Wl,-u,ewts_ngen_log"
-            ewts::ewts_ngen_bridge
-            "-Wl,--as-needed"
+    target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
+    target_link_options(petbmi PRIVATE
+        "-Wl,--no-as-needed"
+        "-Wl,-u,ewts_ngen_log"
+        "-Wl,--as-needed"
     )
 else()
     target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
