@@ -30,31 +30,17 @@ set_target_properties(petbmi PROPERTIES PUBLIC_HEADER include/bmi_pet.h)
 # --- EWTS (installed from nwm-ewts) ---
 find_package(ewts CONFIG REQUIRED)
 
+# Always use EWTS runtime logger for C
+target_link_libraries(petbmi PRIVATE ewts::ewts_c)
+
+# Built with ngen bridge
+target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
+target_compile_definitions(petbmi PRIVATE EWTS_HAVE_NGEN_BRIDGE)
+
+
 # Code requires minimum of C99 standard to compile
 set_target_properties(petbmi PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)
 
-# Built with ngen bridge
-target_compile_definitions(petbmi PRIVATE EWTS_HAVE_NGEN_BRIDGE)
-
-# Link libraries
-target_link_libraries(petbmi
-    PRIVATE
-        Boost::serialization
-        ewts::ewts_c
-)
-
-# Force retention of the ngen bridge shared library at runtime.
-# The bridge hook is weak, so ordinary linking can drop the shared library.
-if(NOT WIN32)
-    target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
-    target_link_options(petbmi PRIVATE
-        "-Wl,--no-as-needed"
-        "-Wl,-u,ewts_ngen_log"
-        "-Wl,--as-needed"
-    )
-else()
-    target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
-endif()
 
 include(GNUInstallDirs)
 

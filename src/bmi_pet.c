@@ -18,16 +18,17 @@
 static int
 Initialize (Bmi *self, const char *cfg_file)
 {
-    if (self == NULL || self->data == NULL) {
-        LOG(FATAL, "Initialize failed: self or self->data is NULL");
-        return BMI_FAILURE;
-    }
 
     #ifdef EWTS_HAVE_NGEN_BRIDGE
         EwtsInit(EWTS_ID_PET, true);
     #else
         EwtsInit(EWTS_ID_PET, false);
     #endif
+
+    if (self == NULL || self->data == NULL) {
+        LOG(FATAL, "Initialize failed: self or self->data is NULL");
+        return BMI_FAILURE;
+    }
 
     pet_model *pet = (pet_model *) self->data;
     LOG(INFO, "Initializing PET with config file '%s'", cfg_file ? cfg_file : "(null)");

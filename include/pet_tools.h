@@ -131,9 +131,9 @@ double calculate_aerodynamic_resistance(pet_model *model)
   if(1.0e-06 >= momentum_transfer_roughness_length_m)  
     fprintf(stderr,"momentum_transfer_roughness_length_m is tiny in calculate_aerodynamic_resistance().  Should not be tiny.\n");
   if(1.0e-06 >= heat_transfer_roughness_length_m )  //warn.  Should not be tiny.
-    fprintf(stderr,"heat_transfer_roughness_length_m is tiny in calculate_aerodynamic_resistance().  Should not be tiny.\n");
+    LOG(SEVERE,"heat_transfer_roughness_length_m is tiny in calculate_aerodynamic_resistance().  Should not be tiny.\n");
   if(wind_speed_m_per_s <= 0.0 ) {
-    fprintf(stderr,"WARNING: wind_speed_m_per_s <= in calculate_aerodynamic_resistance(). Setting to 0.01 m/s.\n");
+    LOG(SEVERE,"WARNING: wind_speed_m_per_s <= in calculate_aerodynamic_resistance(). Setting to 0.01 m/s.\n");
     wind_speed_m_per_s = 0.01; // small positive value to avoid divide by zero
   }
   // convert to smaller local variable names to keep equation readable 

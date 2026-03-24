@@ -69,6 +69,13 @@ extern void free_pet_model(pet_model *model) {
 // ######################    RUN    ########    RUN    ########    RUN    ########    RUN    #################################
 extern int run_pet(pet_model* model)
 {
+
+  #ifdef EWTS_HAVE_NGEN_BRIDGE
+    EwtsInit(EWTS_ID_PET, true);
+  #else
+    EwtsInit(EWTS_ID_PET, false);
+  #endif
+
   if (model == NULL) {
     LOG(FATAL, "run_pet called with NULL model");
     return 1;
@@ -77,6 +84,7 @@ extern int run_pet(pet_model* model)
     fprintf(stderr, "ERROR: zero_plane_displacement_height_m must be > 0.0 m. Current value: %lf\n", model->pet_params.zero_plane_displacement_height_m);
     LOG(FATAL, "ERROR: zero_plane_displacement_height_m must be > 0.0 m. Current value: %lf\n", model->pet_params.zero_plane_displacement_height_m);
     exit(EXIT_FAILURE);
+  }
 
   if (model->bmi.verbose > 2) {
     LOG(DEBUG, "Running PET model");
