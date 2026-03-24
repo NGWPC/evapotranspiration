@@ -690,6 +690,8 @@ int read_file_line_counts_pet(const char* file_name, int* line_count, int* max_l
 }  // end: read_file_line_counts
 
 //---------------------------------------------------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------------------------------------------------
 int read_init_config_pet(pet_model* model, const char* config_file)
 {
     int config_line_count, max_config_line_length;
@@ -706,224 +708,231 @@ int read_init_config_pet(pet_model* model, const char* config_file)
 
     int count_result = read_file_line_counts_pet(config_file, &config_line_count, &max_config_line_length);
     if (count_result == -1) {
-        LOG(FATAL, "Unable to inspect PET config file '%s'", config_file);
+        LOG(SEVERE, "Unable to inspect PET config file '%s'", config_file);
         return BMI_FAILURE;
     }
 
     FILE* fp = fopen(config_file, "r");
     if (fp == NULL) {
-        LOG(FATAL, "Unable to open PET config file '%s'", config_file);
+        LOG(SEVERE, "Unable to open PET config file '%s'", config_file);
         return BMI_FAILURE;
     }
 
     LOG(INFO, "Reading PET configuration from '%s'", config_file);
 
     char* ret = NULL;
-
-    // TODO: document config file format (<param_key>=<param_val>, where array values are comma delim strings)
-
     char config_line[max_config_line_length + 1];
 
     for (int i = 0; i < config_line_count; i++) {
         char *param_key, *param_value;
+
         ret = fgets(config_line, max_config_line_length + 1, fp);
         if (ret == NULL) {
-            LOG(FATAL, "Failed to read config line %d from '%s'", i + 1, config_file);
+            LOG(SEVERE, "Failed to read config line %d from '%s'", i + 1, config_file);
             fclose(fp);
             return BMI_FAILURE;
         }
+
         char* config_line_ptr = config_line;
         config_line_ptr = strsep(&config_line_ptr, "\n");
         param_key = strsep(&config_line_ptr, "=");
         param_value = strsep(&config_line_ptr, "=");
 
-	if (param_key == NULL || param_value == NULL) {
+        if (param_key == NULL || param_value == NULL) {
             LOG(WARNING, "Skipping malformed config line %d in '%s'", i + 1, config_file);
             continue;
         }
-        if (strcmp(param_key, "verbose") == 0){
-            model->bmi.verbose = strtod(param_value, NULL);
-            if(model->bmi.verbose > 1){
-                LOG(INFO, "printing some stuff (level > 1) for unit tests and troubleshooting \n");
+
+        if (strcmp(param_key, "verbose") == 0) {
+            model->bmi.verbose = (int) strtol(param_value, NULL, 10);
+            if (model->bmi.verbose > 2) {
+                LOG(INFO, "Verbose logging enabled: level=%d (high-detail troubleshooting)", model->bmi.verbose);
             }
-            if(model->bmi.verbose > 2){
-                LOG(INFO, "printing a lot of stuff (level > 2) for unit tests and troubleshooting \n");
-            }
-	    continue;    
-        }
-        // jmframe: this should be strtol instead of strtod
-        if (strcmp(param_key, "pet_method") == 0){
-            model->pet_method = strtod(param_value, NULL);
-            if(model->bmi.verbose > 1){
-                LOG(DEBUG, "set PET method from config file \n");
-                LOG(DEBUG, "%d\n", model->pet_method);
-            }
-	    continue;    
-        }
-        if (strcmp(param_key, "yes_aorc") == 0) {
-            model->pet_options.yes_aorc = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "set aorc boolean from config file \n");
-                LOG(DEBUG, "%d\n", model->pet_options.yes_aorc);
+            else if (model->bmi.verbose > 1) {
+                LOG(INFO, "Verbose logging enabled: level=%d (basic troubleshooting)", model->bmi.verbose);
             }
             continue;
         }
+
+        if (strcmp(param_key, "pet_method") == 0) {
+            model->pet_method = (int) strtol(param_value, NULL, 10);
+            if (model->bmi.verbose > 1) {
+                LOG(DEBUG, "Set pet_method from config: %d", model->pet_method);
+            }
+            continue;
+        }
+
+        if (strcmp(param_key, "yes_aorc") == 0) {
+            model->pet_options.yes_aorc = (int) strtol(param_value, NULL, 10);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set yes_aorc from config: %d", model->pet_options.yes_aorc);
+            }
+            continue;
+        }
+
         if (strcmp(param_key, "forcing_file") == 0) {
             model->forcing_file = strdup(param_value);
-            if (strcmp(model->forcing_file,"BMI") == 0){
-                if(model->bmi.verbose >=2)
-                    LOG(DEBUG, "in pet_setup: Getting forcing values from BMI. Not reading in forcing from file. \n");
-                model->bmi.is_forcing_from_bmi = 1;
+            if (model->forcing_file == NULL) {
+                LOG(FATAL, "Failed to allocate forcing_file from config");
+                fclose(fp);
+                return BMI_FAILURE;
             }
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "set forcing file from config file \n");
-                LOG(DEBUG, "%s\n", model->forcing_file);
+
+            if (strcmp(model->forcing_file, "BMI") == 0) {
+                model->bmi.is_forcing_from_bmi = 1;
+                if (model->bmi.verbose >= 2) {
+                    LOG(DEBUG, "Set forcing_file from config: %s (forcing will come from BMI)", model->forcing_file);
+                }
+            }
+            else {
+                if (model->bmi.verbose >= 2) {
+                    LOG(DEBUG, "Set forcing_file from config: %s", model->forcing_file);
+                }
             }
             continue;
         }
+
         if (strcmp(param_key, "wind_speed_measurement_height_m") == 0) {
             model->pet_params.wind_speed_measurement_height_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "set wind speed measurement height from config file \n");
-                LOG(DEBUG, "%lf\n", model->pet_params.wind_speed_measurement_height_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set wind_speed_measurement_height_m from config: %lf",
+                    model->pet_params.wind_speed_measurement_height_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "humidity_measurement_height_m") == 0) {
             model->pet_params.humidity_measurement_height_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "set humidity measurement height from config file \n");
-                LOG(DEBUG, "%lf\n", model->pet_params.humidity_measurement_height_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set humidity_measurement_height_m from config: %lf",
+                    model->pet_params.humidity_measurement_height_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "vegetation_height_m") == 0) {
             model->pet_params.vegetation_height_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "vegetation height from config file \n");
-                LOG(DEBUG, "%lf\n", model->pet_params.vegetation_height_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set vegetation_height_m from config: %lf",
+                    model->pet_params.vegetation_height_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "zero_plane_displacement_height_m") == 0) {
             model->pet_params.zero_plane_displacement_height_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "zero_plane_displacement height from config file \n");
-                LOG(DEBUG, "%lf\n", model->pet_params.zero_plane_displacement_height_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set zero_plane_displacement_height_m from config: %lf",
+                    model->pet_params.zero_plane_displacement_height_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "shortwave_radiation_provided") == 0) {
-            model->pet_options.shortwave_radiation_provided = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "shortwave radiation provided boolean from config file \n");
-                LOG(DEBUG, "%d\n", model->pet_options.shortwave_radiation_provided);
+            model->pet_options.shortwave_radiation_provided = (int) strtol(param_value, NULL, 10);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set shortwave_radiation_provided from config: %d",
+                    model->pet_options.shortwave_radiation_provided);
             }
             continue;
         }
+
         if (strcmp(param_key, "momentum_transfer_roughness_length_m") == 0) {
             model->pet_params.momentum_transfer_roughness_length_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "momentum_transfer_roughness_length_m from config file \n");
-                LOG(DEBUG, "%lf\n", model->pet_params.momentum_transfer_roughness_length_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set momentum_transfer_roughness_length_m from config: %lf",
+                    model->pet_params.momentum_transfer_roughness_length_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "heat_transfer_roughness_length_m") == 0) {
             model->pet_params.heat_transfer_roughness_length_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "heat_transfer_roughness_length_m from config file \n");
-                LOG(DEBUG, "%lf\n", model->pet_params.heat_transfer_roughness_length_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set heat_transfer_roughness_length_m from config: %lf",
+                    model->pet_params.heat_transfer_roughness_length_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "surface_longwave_emissivity") == 0) {
             model->surf_rad_params.surface_longwave_emissivity = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "surface_longwave_emissivity from config file \n");
-                LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_longwave_emissivity);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set surface_longwave_emissivity from config: %lf",
+                    model->surf_rad_params.surface_longwave_emissivity);
             }
             continue;
         }
+
         if (strcmp(param_key, "surface_shortwave_albedo") == 0) {
             model->surf_rad_params.surface_shortwave_albedo = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "surface_shortwave_albedo from config file \n");
-                LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set surface_shortwave_albedo from config: %lf",
+                    model->surf_rad_params.surface_shortwave_albedo);
             }
             continue;
         }
 
-	// Duplicated "surface_shortwave_albedo"  block
-        //if (strcmp(param_key, "surface_shortwave_albedo") == 0) {
-        //    model->surf_rad_params.surface_shortwave_albedo = strtod(param_value, NULL);
-        //    if(model->bmi.verbose >=2){
-        //         LOG(DEBUG, "surface_shortwave_albedo from config file \n");
-        //        LOG(DEBUG, "%lf\n", model->surf_rad_params.surface_shortwave_albedo);
-        //    }
-        //    continue;
-        //}
         if (strcmp(param_key, "latitude_degrees") == 0) {
             model->solar_params.latitude_degrees = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "latitude_degrees from config file \n");
-                LOG(DEBUG, "%lf\n", model->solar_params.latitude_degrees);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set latitude_degrees from config: %lf",
+                    model->solar_params.latitude_degrees);
             }
             continue;
         }
+
         if (strcmp(param_key, "longitude_degrees") == 0) {
             model->solar_params.longitude_degrees = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "longitude_degrees from config file \n");
-                LOG(DEBUG, "%lf\n", model->solar_params.longitude_degrees);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set longitude_degrees from config: %lf",
+                    model->solar_params.longitude_degrees);
             }
             continue;
         }
+
         if (strcmp(param_key, "site_elevation_m") == 0) {
             model->solar_params.site_elevation_m = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "site_elevation_m from config file \n");
-                LOG(DEBUG, "%lf\n", model->solar_params.site_elevation_m);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set site_elevation_m from config: %lf",
+                    model->solar_params.site_elevation_m);
             }
             continue;
         }
+
         if (strcmp(param_key, "time_step_size_s") == 0) {
             model->bmi.time_step_size_s = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "time_step_size_s from config file \n");
-                LOG(DEBUG, "%f\n", model->bmi.time_step_size_s);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set time_step_size_s from config: %f",
+                    model->bmi.time_step_size_s);
             }
             continue;
         }
-        if (strcmp(param_key, "num_timesteps") == 0) {
-            model->bmi.num_timesteps = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "num_timesteps from config file \n");
-                LOG(DEBUG, "%ld\n", model->bmi.num_timesteps);
-            }
-            continue;
-        }
-        if (strcmp(param_key, "run_unit_tests") == 0) {
-            model->bmi.run_unit_tests = strtod(param_value, NULL);
-            if(model->bmi.verbose >=2){
-                LOG(DEBUG, "Running unit tests \n");
-            }
-            continue;
-        }
-       
-        LOG(WARNING, "Unrecognized config key '%s' in '%s'", param_key, config_file);
-    } // end loop through config
-    fclose(fp);
 
-    // Validate parameters here if needed
-    if (model->pet_params.zero_plane_displacement_height_m <= 0.0){
-        // if displacement height is 0 (or less for some unknown reason...)
-        // set to small value to avoid division by zero in wind profile equation
-        model->pet_params.zero_plane_displacement_height_m = 0.01;
+        if (strcmp(param_key, "num_timesteps") == 0) {
+            model->bmi.num_timesteps = strtol(param_value, NULL, 10);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set num_timesteps from config: %ld",
+                    model->bmi.num_timesteps);
+            }
+            continue;
+        }
+
+        if (strcmp(param_key, "run_unit_tests") == 0) {
+            model->bmi.run_unit_tests = (int) strtol(param_value, NULL, 10);
+            if (model->bmi.verbose >= 2) {
+                LOG(DEBUG, "Set run_unit_tests from config: %d",
+                    model->bmi.run_unit_tests);
+            }
+            continue;
+        }
+
+        LOG(WARNING, "Unrecognized config key '%s' in '%s'", param_key, config_file);
     }
 
+    fclose(fp);
     return BMI_SUCCESS;
-} // end: read_init_config
+}
 
 static int Get_var_type (Bmi *self, const char *name, char * type)
 {
