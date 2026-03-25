@@ -132,16 +132,19 @@ extern int run_pet(pet_model* model)
     // Validate AORC humidity measurement height
     if(model->pet_params.humidity_measurement_height_m !=2.0)
     {
-        fprintf(stderr,
-            "ERROR: Humidity measurement height must be 2.0 m (adjustment not implemented). "
-            "Received %lf; overriding to 2.0 m.",
-             model->pet_params.humidity_measurement_height_m);
+        static int warned = 0;
 
-
-        LOG(SEVERE,
-            "Humidity measurement height must be 2.0 m (adjustment not implemented). "
-            "Received %lf; overriding to 2.0 m.",
-             model->pet_params.humidity_measurement_height_m);
+        if (warned == 0) {
+            LOG(WARNING,
+                "Humidity measurement height must be 2.0 m (adjustment not implemented)."
+                "Received %lf; overriding to 2.0 m.",
+                model->pet_params.humidity_measurement_height_m);
+            warned = 1;
+        }
+        else if (warned == 1) {
+            LOG(WARNING, "Humidity measurement height not 2.0 m again; further warnings suppressed");
+            warned = 2;
+        }
 
         model->pet_params.humidity_measurement_height_m = 2.0;
 
@@ -241,7 +244,18 @@ extern int run_pet(pet_model* model)
 
   // prevent dew from forming (i.e., PET < 0)
   if (model->pet_m_per_s < 0) {
-    LOG(WARNING, "Computed PET was negative (%e); clamping to zero", model->pet_m_per_s);
+
+    static int warned = 0;
+
+    if (warned == 0) {
+        LOG(WARNING, "Computed PET was negative (%e); clamping to zero", model->pet_m_per_s);
+        warned = 1;
+    }
+    else if (warned == 1) {
+        LOG(WARNING, "Computed PET was negative again; further warnings suppressed");
+        warned = 2;
+    }
+
     model->pet_m_per_s = 0;
   }
 
