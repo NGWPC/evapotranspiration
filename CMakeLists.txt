@@ -34,6 +34,16 @@ set_target_properties(petbmi PROPERTIES PUBLIC_HEADER include/bmi_pet.h)
 
 target_link_libraries(petbmi PRIVATE Boost::serialization)
 
+# --- EWTS (installed from nwm-ewts) ---
+find_package(ewts CONFIG REQUIRED)
+
+# Always use EWTS runtime logger for C
+target_link_libraries(petbmi PRIVATE ewts::ewts_c)
+
+# Built with ngen bridge
+target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
+target_compile_definitions(petbmi PRIVATE EWTS_HAVE_NGEN_BRIDGE)
+
 # Code requires minimum of C99 standard to compile
 set_target_properties(petbmi PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)
 
