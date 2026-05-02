@@ -242,18 +242,49 @@ main(int argc, const char *argv[]){
     int test_nstep=1;
     double now;
     printf(" updating... timesteps in test loop: %i\n", test_nstep);
-    for (int n=1;n<=test_nstep;n++) // shorter time loop for testing
+
+    double lw_rad = 300.0;      // W m-2
+    double pressure = 101325.0; // Pa
+    double rel_humidity = 0.50; // kg kg-1 / fraction
+    double sw_rad = 500.0;      // W m-2
+    double air_temp = 293.15;   // K
+    double wind_u = 2.0;        // m s-1
+    double wind_v = 0.5;        // m s-1
+
+    status = model->set_value(model, "land_surface_radiation~incoming~longwave__energy_flux", &lw_rad);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    status = model->set_value(model, "land_surface_air__pressure", &pressure);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    status = model->set_value(model, "atmosphere_air_water~vapor__relative_saturation", &rel_humidity);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    status = model->set_value(model, "land_surface_radiation~incoming~shortwave__energy_flux", &sw_rad);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    status = model->set_value(model, "land_surface_air__temperature", &air_temp);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    status = model->set_value(model, "land_surface_wind__x_component_of_velocity", &wind_u);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    status = model->set_value(model, "land_surface_wind__y_component_of_velocity", &wind_v);
+    if (status == BMI_FAILURE) return BMI_FAILURE;
+
+    for (int n=1; n<=test_nstep; n++) // shorter time loop for testing
     {
         // Test BMI: CONTROL FUNCTION update()
         {
             status = model->update(model);
             if (status == BMI_FAILURE) return BMI_FAILURE;
         }
+
         // Print current time step - function already tested
         model->get_current_time(model, &now);
         printf("\n current time: %f\n", now);
-        
-        // Loop through both input and output variables and call get/set_value_*()
+
+        // Loop through input variables and call get/set_value_*()
         for (i=0; i<count_in; i++){
             const char *var_name = names_in[i];
             printf( "  %s\n", var_name);
@@ -261,63 +292,82 @@ main(int argc, const char *argv[]){
             double *var = NULL;
             int inds = 0;
             double *dest = NULL;
-            // Test get_value() at each timestep
+
+            // Test get_value()
             {
                 var = (double*) malloc (sizeof (double)*len);
                 status = model->get_value(model, var_name, var);
                 if (status == BMI_FAILURE) return BMI_FAILURE;
                 printf("   get value: %f\n", var[0]);
                 free(var);
-
             }
+
             // Test get_value_at_indices()
-            { 
+            {
                 dest = (double*) malloc (sizeof (double)*len);
                 status = model->get_value_at_indices(model, var_name, dest, &inds, len);
                 if (status == BMI_FAILURE) return BMI_FAILURE;
                 printf("   get value at indices: %f\n",dest[0]);
                 free(dest);
             }
+
             // Test get_value_ptr()
             {
                 status = model->get_value_ptr(model, var_name, (void**)(&var));
                 if (status == BMI_FAILURE)return BMI_FAILURE;
                 printf("   get value ptr: %p\n",var);
             }
-            // Go ahead and test set_value_*() for last time step here
+
+            // Test set_value() only with physically valid PET forcing values
             if (n == test_nstep){
-                // Test BMI set_value()
-                {    
-                    double *var_new = NULL;
-                    var_new = (double*) malloc (sizeof (double)*len);
-                    var = (double*) malloc (sizeof (double)*len);
-                    var_new[0] = 99.9;
-                    status = model->set_value(model, var_name, var_new);
-                    if (status == BMI_FAILURE)return BMI_FAILURE;
-                    printf("   set value: %f\n",var_new[0]);
-                    // get_value to see if changed
-                    model->get_value(model, var_name, var);
-                    printf("   new get value: %f\n", var[0]);
-                    free(var);
-                    free(var_new);
+                double *var_new = NULL;
+                var_new = (double*) malloc (sizeof (double)*len);
+                var = (double*) malloc (sizeof (double)*len);
+
+                if (strcmp(var_name, "land_surface_air__temperature") == 0) {
+                    var_new[0] = 294.15;
                 }
-                // Test BMI set_value_at_indices()
-                {
-                    double *dest_new = NULL;
-                    dest_new = (double*) malloc (sizeof (double)*len);
-                    dest = (double*) malloc (sizeof (double)*len);
-                    dest_new[0] = 11.1;
-                    status = model->set_value_at_indices(model, var_name, &inds, len, dest_new);
-                    if (status == BMI_FAILURE)return BMI_FAILURE;
-                    printf("   set value at indices: %f\n",dest_new[0]);
-                    // get_value_at_indices to see if changed
-                    model->get_value_at_indices(model, var_name, dest, &inds, len);
-                    printf("   new get value at indices: %f\n", dest[0]);
-                    free(dest);
-                    free(dest_new);
+                else if (strcmp(var_name, "land_surface_air__pressure") == 0) {
+                    var_new[0] = 101000.0;
                 }
+                else if (strcmp(var_name, "atmosphere_air_water~vapor__relative_saturation") == 0) {
+                    var_new[0] = 0.60;
+                }
+                else if (strcmp(var_name, "land_surface_radiation~incoming~longwave__energy_flux") == 0) {
+                    var_new[0] = 310.0;
+                }
+                else if (strcmp(var_name, "land_surface_radiation~incoming~shortwave__energy_flux") == 0) {
+                    var_new[0] = 550.0;
+                }
+                else if (strcmp(var_name, "land_surface_wind__x_component_of_velocity") == 0) {
+                    var_new[0] = 2.5;
+                }
+                else if (strcmp(var_name, "land_surface_wind__y_component_of_velocity") == 0) {
+                    var_new[0] = 0.7;
+                }
+                else {
+                    var_new[0] = 1.0;
+                }
+
+                status = model->set_value(model, var_name, var_new);
+                if (status == BMI_FAILURE)return BMI_FAILURE;
+                printf("   set value: %f\n",var_new[0]);
+
+                model->get_value(model, var_name, var);
+                printf("   new get value: %f\n", var[0]);
+
+                free(var);
+                free(var_new);
+
+                /*
+                 * Do not call set_value_at_indices() with a generic value like 11.1.
+                 * For temperature, 11.1 K is physically invalid and causes update_until()
+                 * to fail later.
+                 */
             }
         }
+
+        // Loop through output variables and call get_value_*()
         for (i=0; i<count_out; i++){
             const char *var_name = names_out[i];
             printf( "  %s\n", var_name);
@@ -325,66 +375,59 @@ main(int argc, const char *argv[]){
             double *var = NULL;
             int inds = 0;
             double *dest = NULL;
-            // Test get_value() at each timestep
+
+            // Test get_value()
             {
                 var = (double*) malloc (sizeof (double)*len);
                 status = model->get_value(model, var_name, var);
                 if (status == BMI_FAILURE) return BMI_FAILURE;
                 printf("   get value: %f\n", var[0]);
                 free(var);
-
             }
+
             // Test get_value_at_indices()
-            { 
+            {
                 dest = (double*) malloc (sizeof (double)*len);
                 status = model->get_value_at_indices(model, var_name, dest, &inds, len);
                 if (status == BMI_FAILURE) return BMI_FAILURE;
                 printf("   get value at indices: %f\n",dest[0]);
                 free(dest);
             }
+
             // Test get_value_ptr()
             {
                 status = model->get_value_ptr(model, var_name, (void**)(&var));
                 if (status == BMI_FAILURE)return BMI_FAILURE;
                 printf("   get value ptr: %p\n",var);
             }
-            // Go ahead and test set_value_*() for last time step here
-            if (n == test_nstep){
-                // Test BMI set_value()
-                {    
-                    double *var_new = NULL;
-                    var_new = (double*) malloc (sizeof (double)*len);
-                    var = (double*) malloc (sizeof (double)*len);
-                    var_new[0] = -99.9;
-                    status = model->set_value(model, var_name, var_new);
-                    if (status == BMI_FAILURE)return BMI_FAILURE;
-                    printf("   set value: %f\n",var_new[0]);
-                    // get_value to see if changed
-                    model->get_value(model, var_name, var);
-                    printf("   new get value: %f\n", var[0]);
-                    free(var);
-                    free(var_new);
-                }
-                // Test BMI set_value_at_indices()
-                {
-                    double *dest_new = NULL;
-                    dest_new = (double*) malloc (sizeof (double)*len);
-                    dest = (double*) malloc (sizeof (double)*len);
-                    dest_new[0] = -11.1;
-                    status = model->set_value_at_indices(model, var_name, &inds, len, dest_new);
-                    if (status == BMI_FAILURE)return BMI_FAILURE;
-                    printf("   set value at indices: %f\n",dest_new[0]);
-                    // get_value_at_indices to see if changed
-                    model->get_value_at_indices(model, var_name, dest, &inds, len);
-                    printf("   new get value at indices: %f\n", dest[0]);
-                    free(dest);
-                    free(dest_new);
-                }
-            }
+
+            /*
+             * Do not set output variables in this test.
+             * They should be inspected, not overwritten before update_until().
+             */
         }
     }
+
     free(names_out);
     free(names_in);
+
+    // Reset valid forcing before update_until()
+    lw_rad = 300.0;
+    pressure = 101325.0;
+    rel_humidity = 0.50;
+    sw_rad = 500.0;
+    air_temp = 293.15;
+    wind_u = 2.0;
+    wind_v = 0.5;
+
+    model->set_value(model, "land_surface_radiation~incoming~longwave__energy_flux", &lw_rad);
+    model->set_value(model, "land_surface_air__pressure", &pressure);
+    model->set_value(model, "atmosphere_air_water~vapor__relative_saturation", &rel_humidity);
+    model->set_value(model, "land_surface_radiation~incoming~shortwave__energy_flux", &sw_rad);
+    model->set_value(model, "land_surface_air__temperature", &air_temp);
+    model->set_value(model, "land_surface_wind__x_component_of_velocity", &wind_u);
+    model->set_value(model, "land_surface_wind__y_component_of_velocity", &wind_v);
+
     // Test BMI: CONTROL FUNCTION update_until()
     {
         int added_nstep=5;
@@ -392,10 +435,12 @@ main(int argc, const char *argv[]){
         printf("\n updating until... new total timesteps in test loop: %i\n", total_nstep);
         status = model->update_until(model,total_nstep*dt);
         if (status == BMI_FAILURE) return BMI_FAILURE;
+
         // confirm updated current time
         model->get_current_time(model, &now);
         printf(" current time: %f\n", now);
     }
+
     // Test BMI: CONTROL FUNCTION finalize()
     {
         printf("\n finalizing...\n");
