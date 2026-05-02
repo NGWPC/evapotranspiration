@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "../include/pet.h" 
 #include "../include/bmi.h" 
 #include "../include/bmi_pet.h"
