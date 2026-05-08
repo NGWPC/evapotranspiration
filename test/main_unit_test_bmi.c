@@ -280,12 +280,11 @@ main(int argc, const char *argv[]){
             status = model->update(model);
             if (status == BMI_FAILURE) return BMI_FAILURE;
         }
-
         // Print current time step - function already tested
         model->get_current_time(model, &now);
         printf("\n current time: %f\n", now);
-
-        // Loop through input variables and call get/set_value_*()
+        
+	// Loop through both input and output variables and call get/set_value_*()
         for (i=0; i<count_in; i++){
             const char *var_name = names_in[i];
             printf( "  %s\n", var_name);
@@ -293,8 +292,7 @@ main(int argc, const char *argv[]){
             double *var = NULL;
             int inds = 0;
             double *dest = NULL;
-
-            // Test get_value()
+            // Test get_value() at each timestep
             {
                 var = (double*) malloc (sizeof (double)*len);
                 status = model->get_value(model, var_name, var);
@@ -304,14 +302,13 @@ main(int argc, const char *argv[]){
             }
 
             // Test get_value_at_indices()
-            {
+            { 
                 dest = (double*) malloc (sizeof (double)*len);
                 status = model->get_value_at_indices(model, var_name, dest, &inds, len);
                 if (status == BMI_FAILURE) return BMI_FAILURE;
                 printf("   get value at indices: %f\n",dest[0]);
                 free(dest);
             }
-
             // Test get_value_ptr()
             {
                 status = model->get_value_ptr(model, var_name, (void**)(&var));
@@ -376,8 +373,7 @@ main(int argc, const char *argv[]){
             double *var = NULL;
             int inds = 0;
             double *dest = NULL;
-
-            // Test get_value()
+            // Test get_value() at each timestep
             {
                 var = (double*) malloc (sizeof (double)*len);
                 status = model->get_value(model, var_name, var);
