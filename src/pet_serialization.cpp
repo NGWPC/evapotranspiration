@@ -1,5 +1,6 @@
 extern "C" {
 #include "../include/pet.h"
+#include "../include/logger.h"
 }
 
 #include "../include/pet_serialization.h"
@@ -10,7 +11,6 @@ extern "C" {
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
-
 
 class BmiPetSerialization {
     public:
@@ -74,7 +74,6 @@ serialize(Archive& ar, const unsigned int version) {
     ar & model->inter_vars.moist_air_gas_constant_J_per_kg_K;
     ar & model->inter_vars.moist_air_density_kg_per_m3;
     ar & model->inter_vars.slope_sat_vap_press_curve_Pa_s;
-    ar & model->inter_vars.water_latent_heat_of_vaporization_J_per_kg;
     ar & model->inter_vars.psychrometric_constant_Pa_per_C;
 
     // surface radiation forcing
@@ -86,56 +85,87 @@ serialize(Archive& ar, const unsigned int version) {
 
 
 extern "C" {
-
 int free_serialized_pet(Bmi* bmi) {
+    if (bmi == nullptr || bmi->data == nullptr) {
+        LOG(FATAL, "free_serialized_pet called with NULL bmi or bmi->data");
+        return BMI_FAILURE;
+    }
+
     pet_model* model = (pet_model*)bmi->data;
+
     if (model->serialized != NULL) {
         free(model->serialized);
         model->serialized = NULL;
     }
     model->serialized_length = 0;
+
+    LOG(DEBUG, "Freed PET serialized state");
     return BMI_SUCCESS;
 }
 
 int new_serialized_pet(Bmi* bmi) {
+    if (bmi == nullptr || bmi->data == nullptr) {
+        LOG(FATAL, "new_serialized_pet called with NULL bmi or bmi->data");
+        return BMI_FAILURE;
+    }
+
     BmiPetSerialization serializer(bmi);
     vecbuf<char> stream;
     boost::archive::binary_oarchive archive(stream);
+
     try {
         archive << serializer;
     } catch (const std::exception &e) {
-        // Log(LogLevel::SEVERE, "Serializing PET encountered an error: ", e.what());
+        LOG(FATAL, "Serializing PET failed: %s", e.what());
         return BMI_FAILURE;
     }
-    // copy serialized data into pet data
+
     pet_model* model = (pet_model*)bmi->data;
-    // clear previous data if it exists
+
     if (model->serialized != NULL) {
         free(model->serialized);
+        model->serialized = NULL;
     }
     // set size and allocate memory
-    model->serialized_length = stream.size();
+    uint64_t serialized_size = stream.size();
+    model->serialized_length = serialized_size + sizeof(uint64_t);
     model->serialized = (char*)malloc(model->serialized_length);
-    // make sure memory could be allocated
+
     if (model->serialized == NULL) {
-        // Log(LogLevel::SEVERE, "Serializing PET encountered an error: Failed to allocate memory.");
+        LOG(FATAL, "Serializing PET failed: memory allocation failed for %zu bytes",
+                (size_t)model->serialized_length);
         model->serialized_length = 0;
         return BMI_FAILURE;
     }
-    // copy stream data to new allocation
-    memcpy(model->serialized, stream.data(), model->serialized_length);
+    // copy size of stream data and stream data to new allocation
+    memcpy(model->serialized, &serialized_size, sizeof(uint64_t));
+    memcpy(model->serialized + sizeof(uint64_t), stream.data(), serialized_size);
     return BMI_SUCCESS;
 }
 
-int load_serialized_pet(Bmi* bmi, const char* data) {
+int load_serialized_pet(Bmi* bmi, char* data) {
+    if (bmi == nullptr || bmi->data == nullptr) {
+        LOG(FATAL, "load_serialized_pet called with NULL bmi or bmi->data");
+        return BMI_FAILURE;
+    }
+
+    if (data == nullptr) {
+        LOG(FATAL, "load_serialized_pet called with NULL data");
+        return BMI_FAILURE;
+    }
+
     BmiPetSerialization serializer(bmi);
-    std::istringstream stream(data);
+    uint64_t size;
+    memcpy(&size, data, sizeof(uint64_t));
+    membuf stream(data + sizeof(uint64_t), size);
     boost::archive::binary_iarchive archive(stream);
+
     try {
         archive >> serializer;
+        LOG(DEBUG, "Loaded PET serialized state successfully");
         return BMI_SUCCESS;
     } catch (const std::exception &e) {
-        // Log(LogLevel::SEVERE, "Serializing PET encountered an error: ", e.what());
+        LOG(FATAL, "Deserializing PET failed: %s", e.what());
         return BMI_FAILURE;
     }
 }
