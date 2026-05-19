@@ -14,7 +14,7 @@
 int main(int argc, const char *argv[])
 {
 
-    #ifdef EWTS_HAVE_NGEN_BRIDGE
+    #ifdef USE_EWTS
         EwtsInit(EWTS_ID_PET, true);
     #else
         EwtsInit(EWTS_ID_PET, false);

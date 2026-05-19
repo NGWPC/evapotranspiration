@@ -42,7 +42,7 @@ target_link_libraries(petbmi PRIVATE ewts::ewts_c)
 
 # Built with ngen bridge
 target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
-target_compile_definitions(petbmi PRIVATE EWTS_HAVE_NGEN_BRIDGE)
+target_compile_definitions(petbmi PRIVATE USE_EWTS)
 
 # Code requires minimum of C99 standard to compile
 set_target_properties(petbmi PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)

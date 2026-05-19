@@ -70,7 +70,7 @@ extern void free_pet_model(pet_model *model) {
 extern int run_pet(pet_model* model)
 {
 
-  #ifdef EWTS_HAVE_NGEN_BRIDGE
+  #ifdef USE_EWTS
     EwtsInit(EWTS_ID_PET, true);
   #else
     EwtsInit(EWTS_ID_PET, false);
