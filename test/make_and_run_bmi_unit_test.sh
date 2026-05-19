@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 EWTS_PREFIX="${EWTS_PREFIX:-/tmp/ewts_install}"
 
@@ -49,5 +49,11 @@ test_pass=$?
 rm -f main_unit_test_bmi.o bmi_pet.o pet.o pet_serialization.o
 rm -f run_pet_bmi_test
 rm -rf run_pet_bmi_test.dSYM
+
+if [ "$test_pass" -eq 0 ]; then
+  echo "PET BMI unit test passed"
+else
+  echo "PET BMI unit test failed with exit code ${test_pass}"
+fi
 
 exit $test_pass
