@@ -34,15 +34,23 @@ set_target_properties(petbmi PROPERTIES PUBLIC_HEADER include/bmi_pet.h)
 
 target_link_libraries(petbmi PRIVATE Boost::serialization)
 
-# --- EWTS (installed from nwm-ewts) ---
-find_package(ewts CONFIG REQUIRED)
+option(USE_EWTS "Build PET with EWTS logging" ON)
+message("-- PET CMakeLists USE_EWTS = ${USE_EWTS}")
+if(USE_EWTS)
+    message("-- PET compiled with EWTS logging")
 
-# Always use EWTS runtime logger for C
-target_link_libraries(petbmi PRIVATE ewts::ewts_c)
+    # --- EWTS (installed from nwm-ewts) ---
+    find_package(ewts CONFIG REQUIRED)
 
-# Built with ngen bridge
-target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
-target_compile_definitions(petbmi PRIVATE USE_EWTS)
+    # Always use EWTS runtime logger for C
+    target_link_libraries(petbmi PRIVATE ewts::ewts_c)
+
+    # Built with ngen bridge
+    target_link_libraries(petbmi PRIVATE ewts::ewts_ngen_bridge)
+    target_compile_definitions(petbmi PRIVATE PET_USE_EWTS)
+else()
+    message("-- PET compiled with stdout fallback logging")
+endif()
 
 # Code requires minimum of C99 standard to compile
 set_target_properties(petbmi PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)
