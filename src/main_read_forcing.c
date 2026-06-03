@@ -14,11 +14,13 @@
 int main(int argc, const char *argv[])
 {
 
-    #ifdef EWTS_HAVE_NGEN_BRIDGE
-        EwtsInit(EWTS_ID_PET, true);
-    #else
-        EwtsInit(EWTS_ID_PET, false);
-    #endif
+#ifdef PET_USE_EWTS
+    // Initialize the Error and Warning Trapping System
+    #pragma message("evapotranspiration.main_read_forcing.main: PET_USE_EWTS ON")
+    EwtsInit(PET_MODULE_ID, true);
+#else
+    #pragma message("evapotranspiration.main_read_forcing.main: PET_USE_EWTS OFF")
+#endif
 
     if (argc <= 1) {
         LOG(FATAL, "Missing PET config file argument");
