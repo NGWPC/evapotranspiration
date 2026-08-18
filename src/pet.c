@@ -70,11 +70,13 @@ extern void free_pet_model(pet_model *model) {
 extern int run_pet(pet_model* model)
 {
 
-  #ifdef EWTS_HAVE_NGEN_BRIDGE
-    EwtsInit(EWTS_ID_PET, true);
-  #else
-    EwtsInit(EWTS_ID_PET, false);
-  #endif
+#ifdef PET_USE_EWTS
+    // Initialize the Error and Warning Trapping System
+    #pragma message("evapotranspiration.pet.run_pet: PET_USE_EWTS ON")
+    EwtsInit(PET_MODULE_ID, true);
+#else
+    #pragma message("evapotranspiration.pet.run_pet: PET_USE_EWTS OFF")
+#endif
 
   if (model == NULL) {
     LOG(FATAL, "run_pet called with NULL model");
