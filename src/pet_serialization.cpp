@@ -83,6 +83,9 @@ serialize(Archive& ar, const unsigned int version) {
     ar & model->surf_rad_forcing.relative_humidity_percent;
 }
 
+namespace {
+    using HeaderType = uint32_t;
+}
 
 extern "C" {
 int free_serialized_pet(Bmi* bmi) {
@@ -110,11 +113,13 @@ int new_serialized_pet(Bmi* bmi) {
     }
 
     BmiPetSerialization serializer(bmi);
-    vecbuf<char> stream;
+    vecbuf data;
+    OStreamType stream(data);
     boost::archive::binary_oarchive archive(stream);
 
     try {
         archive << serializer;
+        stream.flush();
     } catch (const std::exception &e) {
         LOG(FATAL, "Serializing PET failed: %s", e.what());
         return BMI_FAILURE;
@@ -127,8 +132,8 @@ int new_serialized_pet(Bmi* bmi) {
         model->serialized = NULL;
     }
     // set size and allocate memory
-    uint64_t serialized_size = stream.size();
-    model->serialized_length = serialized_size + sizeof(uint64_t);
+    uint64_t serialized_size = data.size();
+    model->serialized_length = serialized_size + sizeof(HeaderType);
     model->serialized = (char*)malloc(model->serialized_length);
 
     if (model->serialized == NULL) {
@@ -138,8 +143,8 @@ int new_serialized_pet(Bmi* bmi) {
         return BMI_FAILURE;
     }
     // copy size of stream data and stream data to new allocation
-    memcpy(model->serialized, &serialized_size, sizeof(uint64_t));
-    memcpy(model->serialized + sizeof(uint64_t), stream.data(), serialized_size);
+    memcpy(model->serialized, &serialized_size, sizeof(HeaderType));
+    memcpy(model->serialized + sizeof(HeaderType), data.data(), serialized_size);
     return BMI_SUCCESS;
 }
 
@@ -155,9 +160,9 @@ int load_serialized_pet(Bmi* bmi, char* data) {
     }
 
     BmiPetSerialization serializer(bmi);
-    uint64_t size;
-    memcpy(&size, data, sizeof(uint64_t));
-    membuf stream(data + sizeof(uint64_t), size);
+    HeaderType size;
+    memcpy(&size, data, sizeof(HeaderType));
+    membuf stream(data + sizeof(HeaderType), size);
     boost::archive::binary_iarchive archive(stream);
 
     try {
