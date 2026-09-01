@@ -132,7 +132,7 @@ int new_serialized_pet(Bmi* bmi) {
         model->serialized = NULL;
     }
     // set size and allocate memory
-    uint64_t serialized_size = data.size();
+    HeaderType serialized_size = data.size();
     model->serialized_length = serialized_size + sizeof(HeaderType);
     model->serialized = (char*)malloc(model->serialized_length);
 
